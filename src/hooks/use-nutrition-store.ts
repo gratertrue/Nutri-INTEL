@@ -11,6 +11,7 @@ export interface UserProfile {
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   calorieGoal: number;
   proteinGoal: number;
+  goal: 'weight_loss' | 'muscle_gain' | 'maintenance';
 }
 
 export interface Recipe {
@@ -34,6 +35,18 @@ export interface Achievement {
   unlocked: boolean;
 }
 
+export interface WearableData {
+  steps: number;
+  heartRate: number;
+  sleepHours: number;
+}
+
+export interface MealPlan {
+  id: string;
+  name: string;
+  days: { [key: string]: Recipe[] }; // Day of week -> Recipes
+}
+
 const INITIAL_PROFILE: UserProfile = {
   name: "Explorer",
   weight: 70,
@@ -43,12 +56,14 @@ const INITIAL_PROFILE: UserProfile = {
   activityLevel: 'moderate',
   calorieGoal: 2000,
   proteinGoal: 150,
+  goal: 'maintenance',
 };
 
 const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: 'first_log', title: 'First Bite', description: 'Log your first food item', icon: '🍎', unlocked: false },
   { id: 'protein_king', title: 'Protein King', description: 'Hit your protein goal', icon: '💪', unlocked: false },
   { id: 'recipe_master', title: 'Chef de Cuisine', description: 'Create your first recipe', icon: '👨‍🍳', unlocked: false },
+  { id: 'planner_pro', title: 'Planner Pro', description: 'Create a 7-day meal plan', icon: '📅', unlocked: false },
 ];
 
 export function useNutritionStore() {
@@ -67,6 +82,16 @@ export function useNutritionStore() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>(() => {
+    const saved = localStorage.getItem('nutrition_meal_plans');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [wearableData, setWearableData] = useState<WearableData>(() => {
+    const saved = localStorage.getItem('nutrition_wearable');
+    return saved ? JSON.parse(saved) : { steps: 8432, heartRate: 68, sleepHours: 7.5 };
+  });
+
   const [points, setPoints] = useState(() => Number(localStorage.getItem('nutrition_points') || 0));
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
     const saved = localStorage.getItem('nutrition_achievements');
@@ -77,9 +102,11 @@ export function useNutritionStore() {
     localStorage.setItem('nutrition_profile', JSON.stringify(profile));
     localStorage.setItem('nutrition_logs', JSON.stringify(logs));
     localStorage.setItem('nutrition_recipes', JSON.stringify(recipes));
+    localStorage.setItem('nutrition_meal_plans', JSON.stringify(mealPlans));
+    localStorage.setItem('nutrition_wearable', JSON.stringify(wearableData));
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
-  }, [profile, logs, recipes, points, achievements]);
+  }, [profile, logs, recipes, mealPlans, wearableData, points, achievements]);
 
   const addLog = (food: FoodItem, amount: number) => {
     const newLog: LogEntry = {
@@ -104,6 +131,17 @@ export function useNutritionStore() {
     checkAchievements('recipe_master');
   };
 
+  const addMealPlan = (name: string, days: { [key: string]: Recipe[] }) => {
+    const newPlan: MealPlan = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      days,
+    };
+    setMealPlans(prev => [...prev, newPlan]);
+    addPoints(100);
+    checkAchievements('planner_pro');
+  };
+
   const addPoints = (amount: number) => {
     setPoints(prev => prev + amount);
     if (amount >= 50) confetti();
@@ -124,11 +162,22 @@ export function useNutritionStore() {
     return (profile.weight / (heightInMeters * heightInMeters)).toFixed(1);
   };
 
+  const getMacroSplit = () => {
+    switch (profile.goal) {
+      case 'weight_loss': return { protein: 40, carbs: 30, fat: 30 };
+      case 'muscle_gain': return { protein: 30, carbs: 40, fat: 30 };
+      default: return { protein: 30, carbs: 40, fat: 30 };
+    }
+  };
+
   return { 
     profile, setProfile, 
     logs, addLog, 
     recipes, addRecipe,
+    mealPlans, addMealPlan,
+    wearableData, setWearableData,
     points, achievements, 
-    addPoints, calculateBMI 
+    addPoints, calculateBMI,
+    getMacroSplit
   };
 }

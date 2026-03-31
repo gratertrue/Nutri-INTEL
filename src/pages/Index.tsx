@@ -3,26 +3,72 @@ import Sidebar from '@/components/Sidebar';
 import NutritionDashboard from '@/components/NutritionDashboard';
 import FoodSearch from '@/components/FoodSearch';
 import RecipeBuilder from '@/components/RecipeBuilder';
+import MealPlanner from '@/components/MealPlanner';
+import NutritionHistory from '@/components/NutritionHistory';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity } from 'lucide-react';
+import { Scale, User as UserIcon, Activity, Zap, Flame, Moon, Footprints, Heart } from 'lucide-react';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, setProfile, achievements, calculateBMI } = useNutritionStore();
+  const { profile, setProfile, achievements, calculateBMI, wearableData } = useNutritionStore();
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <NutritionDashboard />;
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-cyan-500/10 rounded-xl">
+                    <Footprints className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Steps Today</p>
+                    <p className="text-xl font-bold text-white">{wearableData.steps.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-red-500/10 rounded-xl">
+                    <Heart className="h-6 w-6 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Avg Heart Rate</p>
+                    <p className="text-xl font-bold text-white">{wearableData.heartRate} BPM</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="p-3 bg-purple-500/10 rounded-xl">
+                    <Moon className="h-6 w-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase">Sleep</p>
+                    <p className="text-xl font-bold text-white">{wearableData.sleepHours}h</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <NutritionDashboard />
+          </div>
+        );
       case 'search':
         return <FoodSearch />;
       case 'recipes':
         return <RecipeBuilder />;
+      case 'planner':
+        return <MealPlanner />;
+      case 'history':
+        return <NutritionHistory />;
       case 'profile':
         return (
           <div className="space-y-6 max-w-4xl mx-auto">
@@ -82,6 +128,22 @@ const Index = () => {
                       onChange={e => setProfile({...profile, height: Number(e.target.value)})}
                       className="bg-slate-800 border-slate-700 text-white"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-400">Goal</Label>
+                    <Select 
+                      value={profile.goal} 
+                      onValueChange={(v: any) => setProfile({...profile, goal: v})}
+                    >
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                        <SelectValue placeholder="Select goal" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                        <SelectItem value="weight_loss">Weight Loss</SelectItem>
+                        <SelectItem value="muscle_gain">Muscle Gain</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-slate-400">Calorie Goal</Label>
