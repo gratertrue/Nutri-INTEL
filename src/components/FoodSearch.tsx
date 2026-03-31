@@ -4,14 +4,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Plus, Loader2, Info } from 'lucide-react';
+import { Search, Plus, Loader2, Info, ChevronRight, Scale } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import HealthAnalyzer from './HealthAnalyzer';
 
 const FoodSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [amount, setAmount] = useState(100);
   const { addLog } = useNutritionStore();
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -28,9 +39,11 @@ const FoodSearch = () => {
     }
   };
 
-  const handleAdd = (food: FoodItem) => {
-    addLog(food, 100); // Default 100g
-    showSuccess(`Added ${food.description} to log!`);
+  const handleAdd = (food: FoodItem, logAmount: number) => {
+    addLog(food, logAmount);
+    showSuccess(`Added ${logAmount}g of ${food.description} to log!`);
+    setSelectedFood(null);
+    setAmount(100);
   };
 
   return (
@@ -54,19 +67,19 @@ const FoodSearch = () => {
         {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
           const calories = getNutrientValue(food.foodNutrients, "Energy");
-          const protein = getNutrientValue(food.foodNutrients, "Protein");
           
           return (
-            <Card key={food.fdcId} className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all group">
+            <Card 
+              key={food.fdcId} 
+              className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all group cursor-pointer"
+              onClick={() => setSelectedFood(food)}
+            >
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="text-white font-medium group-hover:text-cyan-400 transition-colors">{food.description}</h3>
                   <div className="flex gap-2 items-center">
                     <Badge variant="outline" className="text-slate-400 border-slate-700">
                       {Math.round(calories)} kcal / 100g
-                    </Badge>
-                    <Badge variant="outline" className="text-slate-400 border-slate-700">
-                      {Math.round(protein)}g Protein
                     </Badge>
                     <div className={`text-xs font-bold px-2 py-0.5 rounded ${
                       score > 70 ? 'bg-green-500/20 text-green-400' : 
@@ -77,14 +90,7 @@ const FoodSearch = () => {
                     </div>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => handleAdd(food)}
-                  size="icon" 
-                  variant="ghost" 
-                  className="text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10"
-                >
-                  <Plus className="h-5 w-5" />
-                </Button>
+                <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-cyan-400 transition-colors" />
               </CardContent>
             </Card>
           );
@@ -96,6 +102,107 @@ const FoodSearch = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
+        <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-2xl">
+          {selectedFood && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold text-cyan-400">{selectedFood.description}</DialogTitle>
+                <p className="text-slate-400 text-sm">Nutrition facts per {amount}g</p>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Calories</p>
+                      <p className="text-xl font-bold text-white">
+                        {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Protein</p>
+                      <p className="text-xl font-bold text-blue-400">
+                        {(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Carbs</p>
+                      <p className="text-xl font-bold text-green-400">
+                        {(getNutrientValue(selectedFood.foodNutrients, "Carbohydrate") * (amount / 100)).toFixed(1)}g
+                      </p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Fat</p>
+                      <p className="text-xl font-bold text-yellow-400">
+                        {(getNutrientValue(selectedFood.foodNutrients, "Total lipid (fat)") * (amount / 100)).toFixed(1)}g
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-slate-500 uppercase">Micronutrients</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                      <div className="flex justify-between border-b border-slate-800 py-1">
+                        <span className="text-slate-400">Fiber</span>
+                        <span>{(getNutrientValue(selectedFood.foodNutrients, "Fiber") * (amount / 100)).toFixed(1)}g</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-800 py-1">
+                        <span className="text-slate-400">Sugars</span>
+                        <span>{(getNutrientValue(selectedFood.foodNutrients, "Sugars") * (amount / 100)).toFixed(1)}g</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-800 py-1">
+                        <span className="text-slate-400">Sodium</span>
+                        <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Sodium") * (amount / 100))}mg</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-800 py-1">
+                        <span className="text-slate-400">Calcium</span>
+                        <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Calcium") * (amount / 100))}mg</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase">Health Analysis</p>
+                  <HealthAnalyzer food={selectedFood} />
+                  
+                  <div className="pt-4 space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                      <Scale className="h-3 w-3" />
+                      Adjust Portion (grams)
+                    </label>
+                    <Input 
+                      type="number" 
+                      value={amount}
+                      onChange={(e) => setAmount(Number(e.target.value))}
+                      className="bg-slate-900 border-slate-800 text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="sm:justify-between gap-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setSelectedFood(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => handleAdd(selectedFood, amount)}
+                  className="bg-cyan-600 hover:bg-cyan-700 flex-1"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add to Daily Log
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       
       <div className="text-center text-[10px] text-slate-600 mt-8">
         Powered by <a href="https://fdc.nal.usda.gov/" target="_blank" className="underline">USDA FoodData Central</a>
