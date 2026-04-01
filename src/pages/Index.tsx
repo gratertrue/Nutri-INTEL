@@ -224,7 +224,7 @@ const Index = () => {
       {/* Mobile Header */}
       <div className="lg:hidden flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800 sticky top-0 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-cyan-500 rounded-lg flex-shrink-0 flex items-center justify-center">
             <Zap className="text-white h-5 w-5" />
           </div>
           <h1 className="text-lg font-bold text-white tracking-tight">Nutri-<span className="text-cyan-500">INTEL</span></h1>
