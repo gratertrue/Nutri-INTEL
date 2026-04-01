@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Sidebar from '@/components/Sidebar';
+import Sidebar, { SidebarContent } from '@/components/Sidebar';
 import NutritionDashboard from '@/components/NutritionDashboard';
 import FoodSearch from '@/components/FoodSearch';
 import RecipeBuilder from '@/components/RecipeBuilder';
@@ -13,20 +13,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity, Zap, Flame, Moon, Footprints, Heart } from 'lucide-react';
+import { Scale, User as UserIcon, Activity, Zap, Flame, Moon, Footprints, Heart, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { profile, setProfile, achievements, calculateBMI, wearableData } = useNutritionStore();
+  const isMobile = useIsMobile();
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="p-3 bg-cyan-500/10 rounded-xl">
@@ -49,7 +53,7 @@ const Index = () => {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl sm:col-span-2 md:col-span-1">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="p-3 bg-purple-500/10 rounded-xl">
                     <Moon className="h-6 w-6 text-purple-400" />
@@ -90,7 +94,7 @@ const Index = () => {
       case 'profile':
         return (
           <div className="space-y-6 max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <Card className="bg-slate-900/50 border-slate-800">
                 <CardContent className="p-6 flex flex-col items-center text-center">
                   <Scale className="h-8 w-8 text-cyan-400 mb-2" />
@@ -106,7 +110,7 @@ const Index = () => {
                   <p className="text-xl font-bold text-white capitalize">{profile.activityLevel.replace('_', ' ')}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-slate-900/50 border-slate-800">
+              <Card className="bg-slate-900/50 border-slate-800 sm:col-span-2 md:col-span-1">
                 <CardContent className="p-6 flex flex-col items-center text-center">
                   <UserIcon className="h-8 w-8 text-purple-400 mb-2" />
                   <p className="text-xs text-slate-500 uppercase">Age / Gender</p>
@@ -189,7 +193,7 @@ const Index = () => {
         );
       case 'achievements':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {achievements.map(a => (
               <Card key={a.id} className={`bg-slate-900/50 border-slate-800 transition-all duration-500 ${a.unlocked ? 'opacity-100 scale-100' : 'opacity-40 grayscale scale-95'}`}>
                 <CardContent className="p-6 text-center space-y-2">
@@ -213,29 +217,55 @@ const Index = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0F172A] text-slate-200 font-sans selection:bg-cyan-500/30">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0F172A] text-slate-200 font-sans selection:bg-cyan-500/30">
+      {/* Desktop Sidebar */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-8">
+      {/* Mobile Header */}
+      <div className="lg:hidden flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800 sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
+            <Zap className="text-white h-5 w-5" />
+          </div>
+          <h1 className="text-lg font-bold text-white tracking-tight">Nutri-<span className="text-cyan-500">INTEL</span></h1>
+        </div>
+        
+        <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-slate-400">
+              <Menu className="h-6 w-6" />
+            </Button>
+          </Trigger>
+          <SheetContent side="left" className="p-0 bg-slate-950 border-slate-800 w-64">
+            <SidebarContent 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              onClose={() => setIsMenuOpen(false)} 
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+      
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <motion.div 
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >
-            <h2 className="text-3xl font-bold text-white">Welcome back, {profile.name}!</h2>
-            <p className="text-slate-400">Track your nutrition and reach your goals.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">Welcome back, {profile.name}!</h2>
+            <p className="text-slate-400 text-sm md:text-base">Track your nutrition and reach your goals.</p>
           </motion.div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
             <div className="text-right">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">Level {Math.floor(achievements.filter(a => a.unlocked).length * 2.5 + 1)}</p>
-              <div className="w-32 h-1.5 bg-slate-800 rounded-full mt-1">
+              <p className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">Level {Math.floor(achievements.filter(a => a.unlocked).length * 2.5 + 1)}</p>
+              <div className="w-24 md:w-32 h-1.5 bg-slate-800 rounded-full mt-1">
                 <div 
                   className="h-full bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.5)] transition-all duration-1000" 
                   style={{ width: `${(achievements.filter(a => a.unlocked).length / achievements.length) * 100}%` }}
                 />
               </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shrink-0">
               {profile.name[0]}
             </div>
           </div>

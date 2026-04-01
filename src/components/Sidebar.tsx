@@ -5,9 +5,10 @@ import { cn } from '@/lib/utils';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onClose?: () => void;
 }
 
-const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
+export const SidebarContent = ({ activeTab, setActiveTab, onClose }: SidebarProps) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'search', label: 'Food Lookup', icon: Search },
@@ -19,8 +20,13 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
     { id: 'profile', label: 'My Profile', icon: User },
   ];
 
+  const handleTabClick = (id: string) => {
+    setActiveTab(id);
+    if (onClose) onClose();
+  };
+
   return (
-    <div className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen sticky top-0">
+    <div className="flex flex-col h-full">
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
           <Zap className="text-white h-5 w-5" />
@@ -32,7 +38,7 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
         {menuItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => handleTabClick(item.id)}
             className={cn(
               "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
               activeTab === item.id 
@@ -58,6 +64,14 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
+  return (
+    <div className="hidden lg:flex w-64 bg-slate-950 border-r border-slate-800 flex-col h-screen sticky top-0">
+      <SidebarContent activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 };
