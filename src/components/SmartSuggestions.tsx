@@ -13,7 +13,7 @@ const SUGGESTIONS = {
   muscle_gain: [
     { name: 'Steak & Sweet Potato', cals: 650, protein: 45, icon: Beef },
     { name: 'Chicken & Brown Rice Bowl', cals: 550, protein: 40, icon: Beef },
-    { name: 'Protein Oatmeal with Peanut Butter', cals: 450, protein: 25, icon: Wheat },
+    { name: 'Protein Oatmeal with Peanut Butter', cals: 250, protein: 25, icon: Wheat },
   ],
   maintenance: [
     { name: 'Turkey Avocado Wrap', cals: 420, protein: 28, icon: Beef },
@@ -24,7 +24,9 @@ const SUGGESTIONS = {
 
 const SmartSuggestions = () => {
   const { profile } = useNutritionStore();
-  const suggestions = SUGGESTIONS[profile.goal] || SUGGESTIONS.maintenance;
+  // Fallback to maintenance if goal is missing
+  const currentGoal = profile?.goal || 'maintenance';
+  const suggestions = SUGGESTIONS[currentGoal as keyof typeof SUGGESTIONS] || SUGGESTIONS.maintenance;
 
   return (
     <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
@@ -33,7 +35,7 @@ const SmartSuggestions = () => {
           <Sparkles className="h-5 w-5 text-yellow-400" />
           Smart Suggestions
         </CardTitle>
-        <p className="text-xs text-slate-500">Based on your {profile.goal.replace('_', ' ')} goal</p>
+        <p className="text-xs text-slate-500">Based on your {currentGoal.replace('_', ' ')} goal</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {suggestions.map((item, idx) => (
