@@ -14,20 +14,26 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity, Zap, Moon, Footprints, Play, Square } from 'lucide-react';
+import { Scale, User as UserIcon, Activity, Zap, Moon, Footprints, Play, Square, Utensils, Calendar, Calculator } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, setProfile, achievements, calculateBMI, wearableData, toggleSleep } = useNutritionStore();
+  const { profile, setProfile, achievements, calculateBMI, wearableData, toggleSleep, calculateRecommendedCalories } = useNutritionStore();
+
+  const handleAutoCalorie = () => {
+    const recommended = calculateRecommendedCalories();
+    setProfile({ ...profile, calorieGoal: recommended });
+    showSuccess(`Calorie goal updated to ${recommended} kcal based on your BMI and profile!`);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="p-3 bg-cyan-500/10 rounded-xl">
@@ -72,6 +78,19 @@ const Index = () => {
                   </Button>
                 </CardContent>
               </Card>
+              <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+                <CardContent className="p-4 flex items-center justify-around h-full">
+                  <Button variant="ghost" onClick={() => setActiveTab('recipes')} className="flex flex-col gap-1 h-auto py-2 text-slate-400 hover:text-cyan-400">
+                    <Utensils className="h-5 w-5" />
+                    <span className="text-[10px] uppercase font-bold">Recipes</span>
+                  </Button>
+                  <div className="w-px h-8 bg-slate-800" />
+                  <Button variant="ghost" onClick={() => setActiveTab('planner')} className="flex flex-col gap-1 h-auto py-2 text-slate-400 hover:text-cyan-400">
+                    <Calendar className="h-5 w-5" />
+                    <span className="text-[10px] uppercase font-bold">Planner</span>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -98,7 +117,19 @@ const Index = () => {
           </div>
         );
       case 'history':
-        return <NutritionHistory />;
+        return (
+          <div className="space-y-6">
+            <div className="flex gap-4 mb-4">
+              <Button onClick={() => setActiveTab('recipes')} variant="outline" className="border-slate-800 text-slate-400 hover:text-white">
+                <Utensils className="h-4 w-4 mr-2" /> Recipe Builder
+              </Button>
+              <Button onClick={() => setActiveTab('planner')} variant="outline" className="border-slate-800 text-slate-400 hover:text-white">
+                <Calendar className="h-4 w-4 mr-2" /> Meal Planner
+              </Button>
+            </div>
+            <NutritionHistory />
+          </div>
+        );
       case 'profile':
         return (
           <div className="space-y-6 max-w-4xl mx-auto">
@@ -109,7 +140,7 @@ const Index = () => {
                   <p className="text-xs text-slate-500 uppercase font-bold">BMI Calculator</p>
                   <p className="text-4xl font-black text-white my-2">{calculateBMI()}</p>
                   <div className={cn(
-                    "text-[10px] px-2 py-1 rounded-full font-bold uppercase",
+                    "text-[10px] px-2 py-1 rounded-full font-bold uppercase mb-4",
                     Number(calculateBMI()) < 18.5 ? "bg-blue-500/20 text-blue-400" :
                     Number(calculateBMI()) < 25 ? "bg-green-500/20 text-green-400" :
                     "bg-red-500/20 text-red-400"
@@ -117,6 +148,10 @@ const Index = () => {
                     {Number(calculateBMI()) < 18.5 ? "Underweight" :
                      Number(calculateBMI()) < 25 ? "Healthy Weight" : "Overweight"}
                   </div>
+                  <Button onClick={handleAutoCalorie} size="sm" className="bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600/40 border border-cyan-500/30">
+                    <Calculator className="h-3 w-3 mr-2" />
+                    Sync Calorie Goal
+                  </Button>
                 </CardContent>
               </Card>
               <Card className="bg-slate-900/50 border-slate-800">
@@ -168,6 +203,49 @@ const Index = () => {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label className="text-slate-400">Age</Label>
+                    <Input 
+                      type="number"
+                      value={profile.age} 
+                      onChange={e => setProfile({...profile, age: Number(e.target.value)})}
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-400">Gender</Label>
+                    <Select 
+                      value={profile.gender} 
+                      onValueChange={(v: any) => setProfile({...profile, gender: v})}
+                    >
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-400">Activity Level</Label>
+                    <Select 
+                      value={profile.activityLevel} 
+                      onValueChange={(v: any) => setProfile({...profile, activityLevel: v})}
+                    >
+                      <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                        <SelectValue placeholder="Select activity" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                        <SelectItem value="sedentary">Sedentary</SelectItem>
+                        <SelectItem value="light">Lightly Active</SelectItem>
+                        <SelectItem value="moderate">Moderately Active</SelectItem>
+                        <SelectItem value="active">Very Active</SelectItem>
+                        <SelectItem value="very_active">Extra Active</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label className="text-slate-400">Goal</Label>
                     <Select 
                       value={profile.goal} 
@@ -185,21 +263,17 @@ const Index = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-slate-400">Calorie Goal</Label>
-                    <Input 
-                      type="number"
-                      value={profile.calorieGoal} 
-                      onChange={e => setProfile({...profile, calorieGoal: Number(e.target.value)})}
-                      className="bg-slate-800 border-slate-700 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-slate-400">Water Goal (ml)</Label>
-                    <Input 
-                      type="number"
-                      value={profile.waterGoal} 
-                      onChange={e => setProfile({...profile, waterGoal: Number(e.target.value)})}
-                      className="bg-slate-800 border-slate-700 text-white"
-                    />
+                    <div className="flex gap-2">
+                      <Input 
+                        type="number"
+                        value={profile.calorieGoal} 
+                        onChange={e => setProfile({...profile, calorieGoal: Number(e.target.value)})}
+                        className="bg-slate-800 border-slate-700 text-white"
+                      />
+                      <Button onClick={handleAutoCalorie} variant="secondary" size="icon" title="Auto-calculate">
+                        <Calculator className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <Button onClick={() => showSuccess("Profile updated!")} className="w-full bg-cyan-600 hover:bg-cyan-700">Save Changes</Button>

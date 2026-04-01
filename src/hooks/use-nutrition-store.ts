@@ -189,6 +189,28 @@ export function useNutritionStore() {
     return (profile.weight / (heightInMeters * heightInMeters)).toFixed(1);
   };
 
+  const calculateRecommendedCalories = () => {
+    // Mifflin-St Jeor Equation
+    let bmr = (10 * profile.weight) + (6.25 * profile.height) - (5 * profile.age);
+    if (profile.gender === 'male') bmr += 5;
+    else bmr -= 161;
+
+    const activityFactors = {
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      very_active: 1.9
+    };
+
+    let tdee = bmr * activityFactors[profile.activityLevel];
+
+    if (profile.goal === 'weight_loss') tdee -= 500;
+    if (profile.goal === 'muscle_gain') tdee += 300;
+
+    return Math.round(tdee);
+  };
+
   return { 
     profile, setProfile, 
     logs, addLog, 
@@ -197,7 +219,7 @@ export function useNutritionStore() {
     wearableData, toggleSleep,
     waterIntake, addWater, setWaterIntake,
     points, achievements, 
-    addPoints, calculateBMI
+    addPoints, calculateBMI, calculateRecommendedCalories
   };
 }
 
