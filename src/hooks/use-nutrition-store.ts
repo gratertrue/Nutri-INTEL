@@ -11,6 +11,7 @@ export interface UserProfile {
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   calorieGoal: number;
   proteinGoal: number;
+  waterGoal: number; // ml
   goal: 'weight_loss' | 'muscle_gain' | 'maintenance';
 }
 
@@ -56,6 +57,7 @@ const INITIAL_PROFILE: UserProfile = {
   activityLevel: 'moderate',
   calorieGoal: 2000,
   proteinGoal: 150,
+  waterGoal: 2500,
   goal: 'maintenance',
 };
 
@@ -64,6 +66,7 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: 'protein_king', title: 'Protein King', description: 'Hit your protein goal', icon: '💪', unlocked: false },
   { id: 'recipe_master', title: 'Chef de Cuisine', description: 'Create your first recipe', icon: '👨‍🍳', unlocked: false },
   { id: 'planner_pro', title: 'Planner Pro', description: 'Create a 7-day meal plan', icon: '📅', unlocked: false },
+  { id: 'hydration_hero', title: 'Hydration Hero', description: 'Hit your water goal', icon: '💧', unlocked: false },
 ];
 
 export function useNutritionStore() {
@@ -92,6 +95,7 @@ export function useNutritionStore() {
     return saved ? JSON.parse(saved) : { steps: 8432, heartRate: 68, sleepHours: 7.5 };
   });
 
+  const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
   const [points, setPoints] = useState(() => Number(localStorage.getItem('nutrition_points') || 0));
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
     const saved = localStorage.getItem('nutrition_achievements');
@@ -104,9 +108,10 @@ export function useNutritionStore() {
     localStorage.setItem('nutrition_recipes', JSON.stringify(recipes));
     localStorage.setItem('nutrition_meal_plans', JSON.stringify(mealPlans));
     localStorage.setItem('nutrition_wearable', JSON.stringify(wearableData));
+    localStorage.setItem('nutrition_water', waterIntake.toString());
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
-  }, [profile, logs, recipes, mealPlans, wearableData, points, achievements]);
+  }, [profile, logs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
 
   const addLog = (food: FoodItem, amount: number) => {
     const newLog: LogEntry = {
@@ -118,6 +123,15 @@ export function useNutritionStore() {
     setLogs(prev => [...prev, newLog]);
     addPoints(10);
     checkAchievements('first_log');
+  };
+
+  const addWater = (amount: number) => {
+    setWaterIntake(prev => {
+      const newVal = prev + amount;
+      if (newVal >= profile.waterGoal) checkAchievements('hydration_hero');
+      return newVal;
+    });
+    addPoints(5);
   };
 
   const addRecipe = (name: string, ingredients: { food: FoodItem; amount: number }[]) => {
@@ -176,6 +190,7 @@ export function useNutritionStore() {
     recipes, addRecipe,
     mealPlans, addMealPlan,
     wearableData, setWearableData,
+    waterIntake, addWater, setWaterIntake,
     points, achievements, 
     addPoints, calculateBMI,
     getMacroSplit

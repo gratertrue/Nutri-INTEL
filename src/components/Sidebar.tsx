@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Search, Utensils, Calendar, History, User, Trophy, Menu } from 'lucide-react';
+import { LayoutDashboard, Search, Utensils, Calendar, History, User, Trophy, Droplets, Zap, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -13,6 +13,7 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
     { id: 'search', label: 'Food Lookup', icon: Search },
     { id: 'recipes', label: 'Recipe Builder', icon: Utensils },
     { id: 'planner', label: 'Meal Planner', icon: Calendar },
+    { id: 'hydration', label: 'Hydration', icon: Droplets },
     { id: 'history', label: 'History', icon: History },
     { id: 'achievements', label: 'Achievements', icon: Trophy },
     { id: 'profile', label: 'My Profile', icon: User },
@@ -60,7 +61,5 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
     </div>
   );
 };
-
-import { Zap, Flame } from 'lucide-react';
 
 export default Sidebar;

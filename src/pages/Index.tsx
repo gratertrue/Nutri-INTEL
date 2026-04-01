@@ -5,6 +5,8 @@ import FoodSearch from '@/components/FoodSearch';
 import RecipeBuilder from '@/components/RecipeBuilder';
 import MealPlanner from '@/components/MealPlanner';
 import NutritionHistory from '@/components/NutritionHistory';
+import WaterTracker from '@/components/WaterTracker';
+import SmartCoach from '@/components/SmartCoach';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { showSuccess } from '@/utils/toast';
 import { Scale, User as UserIcon, Activity, Zap, Flame, Moon, Footprints, Heart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -58,7 +61,16 @@ const Index = () => {
                 </CardContent>
               </Card>
             </div>
-            <NutritionDashboard />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <NutritionDashboard />
+              </div>
+              <div className="space-y-6">
+                <WaterTracker />
+                <SmartCoach />
+              </div>
+            </div>
           </div>
         );
       case 'search':
@@ -67,6 +79,12 @@ const Index = () => {
         return <RecipeBuilder />;
       case 'planner':
         return <MealPlanner />;
+      case 'hydration':
+        return (
+          <div className="max-w-2xl mx-auto">
+            <WaterTracker />
+          </div>
+        );
       case 'history':
         return <NutritionHistory />;
       case 'profile':
@@ -154,6 +172,15 @@ const Index = () => {
                       className="bg-slate-800 border-slate-700 text-white"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-slate-400">Water Goal (ml)</Label>
+                    <Input 
+                      type="number"
+                      value={profile.waterGoal} 
+                      onChange={e => setProfile({...profile, waterGoal: Number(e.target.value)})}
+                      className="bg-slate-800 border-slate-700 text-white"
+                    />
+                  </div>
                 </div>
                 <Button onClick={() => showSuccess("Profile updated!")} className="w-full bg-cyan-600 hover:bg-cyan-700">Save Changes</Button>
               </CardContent>
@@ -191,10 +218,13 @@ const Index = () => {
       
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-center mb-8">
-          <div>
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+          >
             <h2 className="text-3xl font-bold text-white">Welcome back, {profile.name}!</h2>
             <p className="text-slate-400">Track your nutrition and reach your goals.</p>
-          </div>
+          </motion.div>
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Level {Math.floor(achievements.filter(a => a.unlocked).length * 2.5 + 1)}</p>
@@ -211,7 +241,17 @@ const Index = () => {
           </div>
         </header>
 
-        {renderContent()}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderContent()}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );
