@@ -25,7 +25,7 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
         <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
           <Zap className="text-white h-5 w-5" />
         </div>
-        <h1 className="text-xl font-bold text-white tracking-tight">Nutri<span className="text-cyan-500">IQ</span></h1>
+        <h1 className="text-xl font-bold text-white tracking-tight">Nutri-<span className="text-cyan-500">INTEL</span></h1>
       </div>
 
       <nav className="flex-1 px-4 space-y-2 mt-4">
