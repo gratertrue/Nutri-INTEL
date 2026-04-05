@@ -20,7 +20,7 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   ];
 
   return (
-    <div className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col h-screen sticky top-0">
+    <div className="hidden md:flex w-64 bg-slate-950 border-r border-slate-800 flex-col h-screen sticky top-0">
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center">
           <Zap className="text-white h-5 w-5" />

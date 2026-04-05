@@ -1,0 +1,9 @@
+{
+  "appId": "com.nutriintel.app",
+  "appName": "Nutri-INTEL",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

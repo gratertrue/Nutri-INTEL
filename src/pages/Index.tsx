@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
+import MobileNav from '@/components/MobileNav';
 import NutritionDashboard from '@/components/NutritionDashboard';
 import FoodSearch from '@/components/FoodSearch';
 import RecipeBuilder from '@/components/RecipeBuilder';
@@ -308,16 +309,16 @@ const Index = () => {
     <div className="flex min-h-screen bg-[#0F172A] text-slate-200 font-sans selection:bg-cyan-500/30">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
         <header className="flex justify-between items-center mb-8">
           <motion.div 
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >
-            <h2 className="text-3xl font-bold text-white">Welcome back, {profile.name}!</h2>
-            <p className="text-slate-400">Track your nutrition and reach your goals.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">Welcome back, {profile.name}!</h2>
+            <p className="text-sm text-slate-400">Track your nutrition and reach your goals.</p>
           </motion.div>
-          <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-4">
             <div className="text-right">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Level {Math.floor(achievements.filter(a => a.unlocked).length * 2.5 + 1)}</p>
               <div className="w-32 h-1.5 bg-slate-800 rounded-full mt-1">
@@ -345,6 +346,8 @@ const Index = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 };
