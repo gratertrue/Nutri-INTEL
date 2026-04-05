@@ -30,6 +30,17 @@ export function getNutrientValue(nutrients: Nutrient[], name: string): number {
   return nutrient ? nutrient.value : 0;
 }
 
+export function calculateSmartScore(nutrients: Nutrient[]): number {
+  const protein = getNutrientValue(nutrients, "Protein");
+  const fiber = getNutrientValue(nutrients, "Fiber");
+  const sugar = getNutrientValue(nutrients, "Sugars");
+  const fat = getNutrientValue(nutrients, "Total lipid (fat)");
+
+  // Simple scoring logic: +protein/fiber, -sugar/fat
+  let score = 50 + (protein * 2) + (fiber * 3) - (sugar * 1.5) - (fat * 1);
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 export type RiskLevel = 'Low' | 'Medium' | 'High';
 
 export function calculateGerdRisk(food: FoodItem): { level: RiskLevel; reason: string } {
@@ -38,7 +49,6 @@ export function calculateGerdRisk(food: FoodItem): { level: RiskLevel; reason: s
   const sugar = getNutrientValue(nutrients, "Sugars");
   const desc = food.description.toLowerCase();
 
-  // Known high-risk keywords
   const highRiskKeywords = ['spicy', 'chili', 'pepper', 'mint', 'chocolate', 'coffee', 'caffeine', 'citrus', 'lemon', 'orange', 'tomato', 'fried'];
   
   if (fat > 15 || highRiskKeywords.some(k => desc.includes(k))) {
