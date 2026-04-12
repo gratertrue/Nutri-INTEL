@@ -16,7 +16,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import HealthAnalyzer from './HealthAnalyzer';
 import { cn } from '@/lib/utils';
-import Fuse from 'fuse.js';
 
 const FoodSearch = () => {
   const [query, setQuery] = useState('');
@@ -29,7 +28,26 @@ const FoodSearch = () => {
   const { addLog } = useNutritionStore();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Fungsi untuk menyoroti teks yang cocok
+  // Fungsi pencarian cerdas manual (pengganti fuse.js)
+  const smartSort = (items: FoodItem[], searchTerm: string) => {
+    const q = searchTerm.toLowerCase();
+    return items.map(item => {
+      let score = 0;
+      const desc = item.description.toLowerCase();
+      const descEn = item.descriptionEn.toLowerCase();
+      
+      // Skor berdasarkan kecocokan
+      if (desc === q || descEn === q) score += 100; // Cocok persis
+      else if (desc.startsWith(q) || descEn.startsWith(q)) score += 50; // Dimulai dengan
+      else if (desc.includes(q) || descEn.includes(q)) score += 10; // Mengandung kata
+      
+      return { item, score };
+    })
+    .filter(res => res.score > 0 || searchTerm === "") // Filter yang tidak cocok
+    .sort((a, b) => b.score - a.score) // Urutkan berdasarkan skor tertinggi
+    .map(res => res.item);
+  };
+
   const highlightText = (text: string, highlight: string) => {
     if (!highlight.trim()) return text;
     const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
@@ -44,14 +62,12 @@ const FoodSearch = () => {
     );
   };
 
-  // Fungsi pencarian utama
   const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
 
-    // Abort previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -60,16 +76,9 @@ const FoodSearch = () => {
     setLoading(true);
     try {
       const data = await searchFoods(searchQuery, 10);
-      
-      // Implementasi Fuzzy Search pada hasil API untuk pengurutan yang lebih cerdas
-      const fuse = new Fuse(data, {
-        keys: ['description', 'descriptionEn'],
-        threshold: 0.4,
-      });
-      const fuzzyResults = fuse.search(searchQuery).map(r => r.item);
-      
-      // Jika fuzzy search tidak memberikan hasil (karena query baru), gunakan data asli
-      setResults(fuzzyResults.length > 0 ? fuzzyResults : data);
+      // Gunakan fungsi smartSort manual
+      const sortedResults = smartSort(data, searchQuery);
+      setResults(sortedResults.length > 0 ? sortedResults : data);
       setActiveIndex(-1);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -80,7 +89,6 @@ const FoodSearch = () => {
     }
   }, []);
 
-  // Debouncing logic (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query) performSearch(query);
@@ -89,7 +97,6 @@ const FoodSearch = () => {
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
-  // Keyboard Navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (results.length === 0) return;
 
@@ -113,7 +120,6 @@ const FoodSearch = () => {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      {/* Search Bar Pintar */}
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
           {loading ? <Loader2 className="animate-spin" /> : <Search />}
@@ -135,7 +141,6 @@ const FoodSearch = () => {
         )}
       </div>
 
-      {/* Results List dengan Navigasi Keyboard */}
       <div className="grid grid-cols-1 gap-3">
         {results.map((food, index) => {
           const score = calculateSmartScore(food.foodNutrients);
@@ -207,7 +212,6 @@ const FoodSearch = () => {
         )}
       </div>
 
-      {/* Detail Dialog */}
       <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
         <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-3xl max-h-[90vh] flex flex-col rounded-3xl">
           {selectedFood && (
