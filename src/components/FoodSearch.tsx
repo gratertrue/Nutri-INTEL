@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Plus, Loader2, ChevronRight, Key, Globe, AlertCircle, X } from 'lucide-react';
+import { Search, Plus, Loader2, ChevronRight, Globe, AlertCircle, X } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -19,33 +19,20 @@ import { cn } from '@/lib/utils';
 
 const FoodSearch = () => {
   const [query, setQuery] = useState('');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('usda_api_key') || '');
   const [results, setResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [amount, setAmount] = useState(100);
-  const [showKeyInput, setShowKeyInput] = useState(!apiKey);
   
   const { addLog } = useNutritionStore();
-
-  const saveApiKey = () => {
-    localStorage.setItem('usda_api_key', apiKey);
-    setShowKeyInput(false);
-    showSuccess("API Key disimpan secara lokal");
-  };
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!query.trim()) return;
-    if (!apiKey) {
-      setShowKeyInput(true);
-      showError("Masukkan API Key USDA terlebih dahulu");
-      return;
-    }
 
     setLoading(true);
     try {
-      const data = await searchFoods(query, apiKey, 12);
+      const data = await searchFoods(query, 12);
       setResults(data);
       if (data.length === 0) showError("Tidak ada hasil ditemukan");
     } catch (err: any) {
@@ -63,41 +50,6 @@ const FoodSearch = () => {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      {/* API Key Management */}
-      {showKeyInput ? (
-        <Card className="bg-cyan-500/5 border-cyan-500/20 border-dashed">
-          <CardContent className="p-4 flex flex-col sm:flex-row gap-3 items-center">
-            <div className="flex-1 w-full">
-              <div className="flex items-center gap-2 mb-2">
-                <Key className="h-4 w-4 text-cyan-400" />
-                <span className="text-xs font-bold text-cyan-400 uppercase">USDA API Key Required</span>
-              </div>
-              <Input 
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Masukkan API Key Anda..."
-                className="bg-slate-900 border-slate-800 text-white"
-              />
-            </div>
-            <Button onClick={saveApiKey} className="bg-cyan-600 hover:bg-cyan-700 w-full sm:w-auto mt-6 sm:mt-0">
-              Simpan Key
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex justify-end">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowKeyInput(true)}
-            className="text-[10px] text-slate-500 hover:text-cyan-400 uppercase font-bold"
-          >
-            <Key className="h-3 w-3 mr-1" /> Ganti API Key
-          </Button>
-        </div>
-      )}
-
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-1">
@@ -222,7 +174,7 @@ const FoodSearch = () => {
                   <div className="flex items-start gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
                     <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
                     <p className="text-[10px] text-slate-400">
-                      Data gizi berasal dari database USDA. Terjemahan dilakukan secara otomatis dan mungkin tidak 100% akurat untuk istilah teknis.
+                      Data gizi berasal dari database USDA. Terjemahan dilakukan secara otomatis.
                     </p>
                   </div>
                 </div>

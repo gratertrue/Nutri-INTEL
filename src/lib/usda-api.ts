@@ -1,12 +1,8 @@
 /**
  * USDA & Translation API Utility
- * 
- * Riset MyMemory API:
- * - Endpoint: https://api.mymemory.translated.net/get
- * - Limit: 1000 kata/hari (Gratis tanpa key)
- * - Langpair: 'id|en' (Indo ke Inggris), 'en|id' (Inggris ke Indo)
  */
 
+const USDA_API_KEY = "W1cTjbexnEV7o7cAqAmXlyytOGFCv2DnblANhXcR";
 const BASE_URL = "https://api.nal.usda.gov/fdc/v1";
 
 export interface Nutrient {
@@ -30,11 +26,6 @@ export interface FoodItem {
 async function translate(text: string, pair: 'id|en' | 'en|id'): Promise<string> {
   if (!text || /^\d+$/.test(text)) return text;
   
-  // Deteksi sederhana: Jika mencari bahasa Inggris di mode id|en, lewati
-  if (pair === 'id|en' && /^[a-zA-Z\s,]+$/.test(text) && !/[aiueo]{3,}/.test(text)) {
-    // Ini hanya heuristik sederhana, MyMemory biasanya cukup pintar menangani ini
-  }
-
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
   
   try {
@@ -46,23 +37,20 @@ async function translate(text: string, pair: 'id|en' | 'en|id'): Promise<string>
     return text;
   } catch (error) {
     console.error("Translation Error:", error);
-    return text; // Fallback ke teks asli
+    return text;
   }
 }
 
 /**
- * Fungsi Pencarian USDA dengan API Key Dinamis
+ * Fungsi Pencarian USDA dengan API Key Hardcoded
  */
-export async function searchFoods(query: string, apiKey: string, pageSize: number = 10): Promise<FoodItem[]> {
-  if (!apiKey) throw new Error("API Key USDA diperlukan");
-
+export async function searchFoods(query: string, pageSize: number = 12): Promise<FoodItem[]> {
   try {
     // 1. Terjemahkan input user (Indo -> Inggris)
     const translatedQuery = await translate(query, 'id|en');
-    console.log(`Searching USDA for: ${translatedQuery} (Original: ${query})`);
 
     // 2. Request ke USDA menggunakan POST
-    const response = await fetch(`${BASE_URL}/foods/search?api_key=${apiKey}`, {
+    const response = await fetch(`${BASE_URL}/foods/search?api_key=${USDA_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -73,20 +61,19 @@ export async function searchFoods(query: string, apiKey: string, pageSize: numbe
     });
 
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error?.message || "Gagal menghubungi API USDA");
+      throw new Error("Gagal menghubungi API USDA");
     }
 
     const data = await response.json();
     const foods = data.foods || [];
 
-    // 3. Terjemahkan hasil kembali ke Indonesia (Inggris -> Indo) secara paralel
+    // 3. Terjemahkan hasil kembali ke Indonesia (Inggris -> Indo)
     const results = await Promise.all(foods.map(async (food: any) => {
       const translatedDesc = await translate(food.description, 'en|id');
       return {
         ...food,
-        descriptionEn: food.description, // Simpan versi asli
-        description: translatedDesc      // Versi terjemahan
+        descriptionEn: food.description,
+        description: translatedDesc
       };
     }));
 

@@ -18,17 +18,11 @@ const RecipeBuilder = () => {
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     
-    const apiKey = localStorage.getItem('usda_api_key') || '';
-    if (!apiKey) {
-      showError("Please set your USDA API Key in the Food Lookup tab first.");
-      return;
-    }
-
     try {
-      const results = await searchFoods(searchQuery, apiKey);
+      const results = await searchFoods(searchQuery, 10);
       setSearchResults(results);
     } catch (error: any) {
-      showError(error.message || "Failed to search ingredients");
+      showError(error.message || "Gagal mencari bahan");
     }
   };
 
@@ -44,11 +38,11 @@ const RecipeBuilder = () => {
 
   const handleSave = () => {
     if (!recipeName.trim() || ingredients.length === 0) {
-      showError("Please provide a name and at least one ingredient");
+      showError("Berikan nama dan setidaknya satu bahan");
       return;
     }
     addRecipe(recipeName, ingredients);
-    showSuccess(`Recipe "${recipeName}" saved!`);
+    showSuccess(`Resep "${recipeName}" disimpan!`);
     setRecipeName('');
     setIngredients([]);
   };
@@ -59,22 +53,22 @@ const RecipeBuilder = () => {
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <ChefHat className="h-5 w-5 text-cyan-400" />
-            New Recipe
+            Resep Baru
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Input 
-            placeholder="Recipe Name (e.g. Morning Smoothie)" 
+            placeholder="Nama Resep (misal: Smoothie Pagi)" 
             value={recipeName}
             onChange={(e) => setRecipeName(e.target.value)}
             className="bg-slate-800 border-slate-700 text-white"
           />
           
           <div className="space-y-2">
-            <Label className="text-slate-400">Add Ingredients</Label>
+            <Label className="text-slate-400">Tambah Bahan</Label>
             <div className="flex gap-2">
               <Input 
-                placeholder="Search ingredients..." 
+                placeholder="Cari bahan..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -116,7 +110,7 @@ const RecipeBuilder = () => {
                       }}
                       className="w-20 h-7 bg-slate-900 border-slate-700 text-xs"
                     />
-                    <span className="text-xs text-slate-500">grams</span>
+                    <span className="text-xs text-slate-500">gram</span>
                   </div>
                 </div>
                 <Button 
@@ -133,25 +127,25 @@ const RecipeBuilder = () => {
 
           <Button onClick={handleSave} className="w-full bg-cyan-600 hover:bg-cyan-700 mt-4">
             <Save className="h-4 w-4 mr-2" />
-            Save Recipe
+            Simpan Resep
           </Button>
         </CardContent>
       </Card>
 
       <Card className="bg-slate-900/50 border-slate-800">
         <CardHeader>
-          <CardTitle className="text-white">Recipe Preview</CardTitle>
+          <CardTitle className="text-white">Pratinjau Resep</CardTitle>
         </CardHeader>
         <CardContent>
           {ingredients.length === 0 ? (
             <div className="text-center py-12 text-slate-500">
-              Add ingredients to see nutrition breakdown
+              Tambah bahan untuk melihat rincian nutrisi
             </div>
           ) : (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-800/30 rounded-xl text-center">
-                  <p className="text-xs text-slate-500 uppercase">Total Calories</p>
+                  <p className="text-xs text-slate-500 uppercase">Total Kalori</p>
                   <p className="text-2xl font-bold text-white">
                     {Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Energy") * (ing.amount/100)), 0))}
                   </p>
@@ -161,20 +155,6 @@ const RecipeBuilder = () => {
                   <p className="text-2xl font-bold text-blue-400">
                     {Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Protein") * (ing.amount/100)), 0))}g
                   </p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-400">Macro Split</p>
-                <div className="h-4 w-full bg-slate-800 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-blue-500" style={{ width: '30%' }} />
-                  <div className="h-full bg-green-500" style={{ width: '40%' }} />
-                  <div className="h-full bg-yellow-500" style={{ width: '30%' }} />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>Protein</span>
-                  <span>Carbs</span>
-                  <span>Fat</span>
                 </div>
               </div>
             </div>
