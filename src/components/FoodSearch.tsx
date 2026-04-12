@@ -168,11 +168,11 @@ const FoodSearch = () => {
                       </h3>
                     </div>
                     <p className="text-xs text-slate-500 italic truncate mb-2">
-                      Original: {food.descriptionEn}
+                      Asli: {food.descriptionEn}
                     </p>
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
-                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
+                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kkal
                       </Badge>
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
                         {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
@@ -180,7 +180,7 @@ const FoodSearch = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isActive && <span className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest animate-pulse">Enter to select</span>}
+                    {isActive && <span className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest animate-pulse">Tekan Enter</span>}
                     <ChevronRight className={cn("h-5 w-5 transition-colors", isActive ? "text-cyan-400" : "text-slate-700")} />
                   </div>
                 </div>
@@ -265,7 +265,7 @@ const FoodSearch = () => {
                           .filter(n => n.value > 0)
                           .map((nutrient, idx) => (
                             <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-800/50 last:border-0">
-                              <span className="text-xs text-slate-400">{nutrient.nutrientName}</span>
+                              <span className="text-xs text-slate-400">{nutrient.translatedName || nutrient.nutrientName}</span>
                               <span className="text-xs font-bold text-white">
                                 {(nutrient.value * (amount / 100)).toFixed(2)} {nutrient.unitName}
                               </span>

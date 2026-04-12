@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { getNutrientValue } from '@/lib/usda-api';
 import { Target, AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react';
@@ -25,20 +24,23 @@ const Goals = () => {
   const percentage = Math.min((totalCalories / calorieGoal) * 100, 100);
   const isOver = totalCalories > calorieGoal;
 
+  const goalLabel = profile.goal === 'weight_loss' ? 'Penurunan Berat' : 
+                    profile.goal === 'muscle_gain' ? 'Pembentukan Otot' : 'Pemeliharaan';
+
   return (
     <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl overflow-hidden">
       <CardHeader className="pb-2">
         <CardTitle className="text-white flex items-center gap-2 text-lg">
           <Target className="h-5 w-5 text-cyan-400" />
-          Daily Goals
+          Target Harian
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <div className="flex justify-between items-end">
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Calorie Budget</p>
+            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Anggaran Kalori</p>
             <p className="text-sm font-medium text-white">
-              {Math.round(totalCalories)} <span className="text-slate-500">/ {calorieGoal} kcal</span>
+              {Math.round(totalCalories)} <span className="text-slate-500">/ {calorieGoal} kkal</span>
             </p>
           </div>
           <div className="relative h-3 w-full bg-slate-800 rounded-full overflow-hidden">
@@ -63,8 +65,8 @@ const Goals = () => {
             >
               <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-red-400">Goal Exceeded</p>
-                <p className="text-xs text-slate-400">You are {Math.round(Math.abs(remaining))} kcal over your daily limit.</p>
+                <p className="text-sm font-bold text-red-400">Melebihi Target</p>
+                <p className="text-xs text-slate-400">Anda melebihi batas harian sebesar {Math.round(Math.abs(remaining))} kkal.</p>
               </div>
             </motion.div>
           ) : remaining < 200 ? (
@@ -75,8 +77,8 @@ const Goals = () => {
             >
               <CheckCircle2 className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-green-400">Almost There!</p>
-                <p className="text-xs text-slate-400">You have {Math.round(remaining)} kcal left. Great discipline today!</p>
+                <p className="text-sm font-bold text-green-400">Hampir Sampai!</p>
+                <p className="text-xs text-slate-400">Tersisa {Math.round(remaining)} kkal. Disiplin yang luar biasa!</p>
               </div>
             </motion.div>
           ) : (
@@ -87,8 +89,8 @@ const Goals = () => {
             >
               <TrendingUp className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-bold text-cyan-400">On Track</p>
-                <p className="text-xs text-slate-400">You have {Math.round(remaining)} kcal remaining for the day.</p>
+                <p className="text-sm font-bold text-cyan-400">Sesuai Jalur</p>
+                <p className="text-xs text-slate-400">Anda memiliki {Math.round(remaining)} kkal tersisa untuk hari ini.</p>
               </div>
             </motion.div>
           ) }
@@ -96,7 +98,7 @@ const Goals = () => {
 
         <div className="pt-2 border-t border-slate-800">
           <p className="text-[10px] text-slate-500 text-center italic">
-            Goals are calculated based on your {profile.goal.replace('_', ' ')} profile settings.
+            Target dihitung berdasarkan profil {goalLabel} Anda.
           </p>
         </div>
       </CardContent>

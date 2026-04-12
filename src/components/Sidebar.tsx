@@ -9,14 +9,14 @@ interface SidebarProps {
 
 const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'search', label: 'Food Lookup', icon: Search },
-    { id: 'recipes', label: 'Recipe Builder', icon: Utensils },
-    { id: 'planner', label: 'Meal Planner', icon: Calendar },
-    { id: 'hydration', label: 'Hydration', icon: Droplets },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'achievements', label: 'Achievements', icon: Trophy },
-    { id: 'profile', label: 'My Profile', icon: User },
+    { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
+    { id: 'search', label: 'Cari Makanan', icon: Search },
+    { id: 'recipes', label: 'Buat Resep', icon: Utensils },
+    { id: 'planner', label: 'Rencana Makan', icon: Calendar },
+    { id: 'hydration', label: 'Hidrasi', icon: Droplets },
+    { id: 'history', label: 'Riwayat', icon: History },
+    { id: 'achievements', label: 'Pencapaian', icon: Trophy },
+    { id: 'profile', label: 'Profil Saya', icon: User },
   ];
 
   return (
@@ -51,10 +51,10 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
 
       <div className="p-4 border-t border-slate-800">
         <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-800">
-          <p className="text-xs text-slate-500 mb-1">Current Streak</p>
+          <p className="text-xs text-slate-500 mb-1">Streak Saat Ini</p>
           <div className="flex items-center gap-2">
             <Flame className="text-orange-500 h-4 w-4" />
-            <span className="text-white font-bold">3 Days</span>
+            <span className="text-white font-bold">3 Hari</span>
           </div>
         </div>
       </div>

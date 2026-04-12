@@ -1,7 +1,6 @@
 import React from 'react';
 import { FoodItem, getNutrientValue } from '@/lib/usda-api';
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface HealthAnalyzerProps {
   food: FoodItem;
@@ -16,24 +15,24 @@ const HealthAnalyzer = ({ food }: HealthAnalyzerProps) => {
 
   const checks = [
     {
-      name: "Diabetes Friendly",
+      name: "Ramah Diabetes",
       status: sugar > 15 ? "high" : sugar > 8 ? "moderate" : "good",
-      message: sugar > 15 ? "High sugar content" : sugar > 8 ? "Moderate sugar" : "Low sugar",
+      message: sugar > 15 ? "Kandungan gula tinggi" : sugar > 8 ? "Gula sedang" : "Rendah gula",
     },
     {
-      name: "Heart Health",
+      name: "Kesehatan Jantung",
       status: (satFat > 5 || sodium > 400) ? "high" : "good",
-      message: (satFat > 5 || sodium > 400) ? "High sodium/saturated fat" : "Heart healthy profile",
+      message: (satFat > 5 || sodium > 400) ? "Natrium/lemak jenuh tinggi" : "Profil jantung sehat",
     },
     {
-      name: "Hypertension",
+      name: "Hipertensi",
       status: sodium > 200 ? "high" : "good",
-      message: sodium > 200 ? "High sodium" : "Low sodium",
+      message: sodium > 200 ? "Natrium tinggi" : "Rendah natrium",
     },
     {
-      name: "Digestion",
+      name: "Pencernaan",
       status: fiber > 5 ? "good" : "moderate",
-      message: fiber > 5 ? "High fiber" : "Low fiber",
+      message: fiber > 5 ? "Tinggi serat" : "Serat rendah",
     }
   ];
 

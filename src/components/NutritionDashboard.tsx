@@ -6,6 +6,7 @@ import { getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
 import { Flame, Target, Trophy, Zap } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SmartSuggestions from './SmartSuggestions';
+import { cn } from '@/lib/utils';
 
 const NutritionDashboard = () => {
   const { logs, profile, points, achievements } = useNutritionStore();
@@ -24,8 +25,8 @@ const NutritionDashboard = () => {
 
   const macroData = [
     { name: 'Protein', value: totals.protein, color: '#3b82f6' },
-    { name: 'Carbs', value: totals.carbs, color: '#10b981' },
-    { name: 'Fat', value: totals.fat, color: '#f59e0b' },
+    { name: 'Karbohidrat', value: totals.carbs, color: '#10b981' },
+    { name: 'Lemak', value: totals.fat, color: '#f59e0b' },
   ];
 
   return (
@@ -33,17 +34,17 @@ const NutritionDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Daily Points</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Poin Harian</CardTitle>
             <Zap className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{points}</div>
-            <p className="text-xs text-slate-500">+12% from yesterday</p>
+            <p className="text-xs text-slate-500">+12% dari kemarin</p>
           </CardContent>
         </Card>
         <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Calories</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Kalori</CardTitle>
             <Flame className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
@@ -63,12 +64,12 @@ const NutritionDashboard = () => {
         </Card>
         <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Achievements</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Pencapaian</CardTitle>
             <Trophy className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{achievements.filter(a => a.unlocked).length} / {achievements.length}</div>
-            <p className="text-xs text-slate-500">Keep going!</p>
+            <p className="text-xs text-slate-500">Terus semangat!</p>
           </CardContent>
         </Card>
       </div>
@@ -77,7 +78,7 @@ const NutritionDashboard = () => {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
             <CardHeader>
-              <CardTitle className="text-white">Macro Distribution</CardTitle>
+              <CardTitle className="text-white">Distribusi Makro</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -114,24 +115,24 @@ const NutritionDashboard = () => {
 
           <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
             <CardHeader>
-              <CardTitle className="text-white">Recent Activity</CardTitle>
+              <CardTitle className="text-white">Aktivitas Terbaru</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {todayLogs.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8">No food logged today yet.</p>
+                  <p className="text-slate-500 text-center py-8">Belum ada makanan yang dicatat hari ini.</p>
                 ) : (
                   todayLogs.slice(-5).reverse().map(log => (
                     <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
                       <div>
                         <p className="text-sm font-medium text-white">{log.food.description}</p>
-                        <p className="text-xs text-slate-500">{log.amount}g • {Math.round(getNutrientValue(log.food.foodNutrients, "Energy") * (log.amount/100))} kcal</p>
+                        <p className="text-xs text-slate-500">{log.amount}g • {Math.round(getNutrientValue(log.food.foodNutrients, "Energy") * (log.amount/100))} kkal</p>
                       </div>
                       <div className={cn(
                         "text-xs font-bold px-2 py-1 rounded",
                         calculateSmartScore(log.food.foodNutrients) > 70 ? 'text-green-400 bg-green-500/10' : 'text-cyan-400 bg-cyan-500/10'
                       )}>
-                        Score: {calculateSmartScore(log.food.foodNutrients)}
+                        Skor: {calculateSmartScore(log.food.foodNutrients)}
                       </div>
                     </div>
                   ))
@@ -148,7 +149,5 @@ const NutritionDashboard = () => {
     </div>
   );
 };
-
-import { cn } from '@/lib/utils';
 
 export default NutritionDashboard;
