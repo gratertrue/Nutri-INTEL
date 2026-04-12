@@ -1,30 +1,55 @@
-/**
- * ############################################################
- * # FILE 2: THE STYLE (CSS)
- * # This file handles all the colors, spacing, and fonts.
- * ############################################################
- */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+    --radius: 1rem;
+  }
+}
+
 body {
   @apply bg-[#0F172A] text-slate-200;
-  background-image: radial-gradient(at 0% 0%, hsla(199, 89%, 48%, 0.1) 0px, transparent 50%);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(199, 89%, 48%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(262, 83%, 58%, 0.1) 0px, transparent 50%);
   background-attachment: fixed;
+  /* Handle mobile notches and status bars */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  overscroll-behavior-y: none; /* Prevent pull-to-refresh bounce on mobile */
 }
 
-/* # Custom card style for a 'glass' look */
-.card {
-  @apply bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 mb-4;
+.glass {
+  @apply bg-slate-900/50 backdrop-blur-xl border border-slate-800;
 }
 
-/* # Navigation bar at the bottom */
-.nav-bar {
-  @apply fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-lg border-t border-slate-800 flex justify-around py-4 z-50;
+/* Hide scrollbars but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-/* # Buttons and Inputs */
-.btn { @apply bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50; }
-.input { @apply bg-slate-800 border-slate-700 text-white rounded-xl p-3 w-full outline-none focus:ring-2 focus:ring-cyan-500; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
