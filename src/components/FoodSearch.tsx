@@ -18,16 +18,16 @@ import HealthAnalyzer from './HealthAnalyzer';
 import { cn } from '@/lib/utils';
 
 const CATEGORIES = [
-  { id: 'fruit', label: 'Fruits', icon: Apple, query: 'fruit' },
-  { id: 'protein', label: 'Proteins', icon: Beef, query: 'meat poultry fish' },
-  { id: 'grains', label: 'Grains', icon: Wheat, query: 'grain bread pasta' },
-  { id: 'beverages', label: 'Drinks', icon: Coffee, query: 'beverage juice' },
+  { id: 'fruit', label: 'Buah', icon: Apple, query: 'fruit' },
+  { id: 'protein', label: 'Protein', icon: Beef, query: 'meat poultry fish' },
+  { id: 'grains', label: 'Biji-bijian', icon: Wheat, query: 'grain bread pasta' },
+  { id: 'beverages', label: 'Minuman', icon: Coffee, query: 'beverage juice' },
 ];
 
 const FILTERS = [
-  { id: 'high-protein', label: 'High Protein', minProtein: 15 },
-  { id: 'low-carb', label: 'Low Carb', maxCarbs: 10 },
-  { id: 'low-cal', label: 'Low Calorie', maxCals: 150 },
+  { id: 'high-protein', label: 'Tinggi Protein', minProtein: 15 },
+  { id: 'low-carb', label: 'Rendah Karbo', maxCarbs: 10 },
+  { id: 'low-cal', label: 'Rendah Kalori', maxCals: 150 },
 ];
 
 const FoodSearch = () => {
@@ -46,11 +46,11 @@ const FoodSearch = () => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const data = await searchFoods(searchQuery, 40);
+      constdata = await searchFoods(searchQuery, 15);
       setResults(data);
       setFilteredResults(data);
     } catch (err) {
-      showError("Failed to fetch food data");
+      showError("Gagal mengambil data makanan");
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ const FoodSearch = () => {
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Added ${logAmount}g of ${food.description} to log!`);
+    showSuccess(`Berhasil menambahkan ${logAmount}g ${food.description} ke log!`);
     setSelectedFood(null);
     setAmount(100);
   };
@@ -98,7 +98,7 @@ const FoodSearch = () => {
             <Input 
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search 300,000+ foods..."
+              placeholder="Cari 300.000+ makanan (Bhs Indonesia)..."
               className="pl-10 bg-slate-900/50 border-slate-800 text-white"
             />
             {query && (
@@ -112,7 +112,7 @@ const FoodSearch = () => {
             )}
           </div>
           <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cari"}
           </Button>
         </form>
 
@@ -188,7 +188,7 @@ const FoodSearch = () => {
                       score > 40 ? 'bg-yellow-500/20 text-yellow-400' : 
                       'bg-red-500/20 text-red-400'
                     )}>
-                      Score: {score}
+                      Skor: {score}
                     </div>
                   </div>
                 </div>
@@ -200,14 +200,14 @@ const FoodSearch = () => {
         
         {!loading && filteredResults.length === 0 && results.length > 0 && (
           <div className="text-center py-12 text-slate-500">
-            No results match your filters.
+            Tidak ada hasil yang cocok dengan filter Anda.
           </div>
         )}
 
         {!loading && results.length === 0 && !activeCategory && (
           <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-2xl">
             <Search className="h-12 w-12 text-slate-800 mx-auto mb-4" />
-            <p className="text-slate-500">Search for a food or select a category above</p>
+            <p className="text-slate-500">Cari makanan atau pilih kategori di atas</p>
           </div>
         )}
       </div>
@@ -218,14 +218,14 @@ const FoodSearch = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-cyan-400">{selectedFood.description}</DialogTitle>
-                <p className="text-slate-400 text-sm">Nutrition facts per {amount}g</p>
+                <p className="text-slate-400 text-sm">Informasi gizi per {amount}g</p>
               </DialogHeader>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Calories</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Kalori</p>
                       <p className="text-xl font-bold text-white">
                         {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
                       </p>
@@ -237,13 +237,13 @@ const FoodSearch = () => {
                       </p>
                     </div>
                     <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Carbs</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Karbo</p>
                       <p className="text-xl font-bold text-green-400">
                         {(getNutrientValue(selectedFood.foodNutrients, "Carbohydrate") * (amount / 100)).toFixed(1)}g
                       </p>
                     </div>
                     <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Fat</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">Lemak</p>
                       <p className="text-xl font-bold text-yellow-400">
                         {(getNutrientValue(selectedFood.foodNutrients, "Total lipid (fat)") * (amount / 100)).toFixed(1)}g
                       </p>
@@ -251,22 +251,22 @@ const FoodSearch = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-500 uppercase">Micronutrients</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase">Mikronutrisi</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Fiber</span>
+                        <span className="text-slate-400">Serat</span>
                         <span>{(getNutrientValue(selectedFood.foodNutrients, "Fiber") * (amount / 100)).toFixed(1)}g</span>
                       </div>
                       <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Sugars</span>
+                        <span className="text-slate-400">Gula</span>
                         <span>{(getNutrientValue(selectedFood.foodNutrients, "Sugars") * (amount / 100)).toFixed(1)}g</span>
                       </div>
                       <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Sodium</span>
+                        <span className="text-slate-400">Natrium</span>
                         <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Sodium") * (amount / 100))}mg</span>
                       </div>
                       <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Calcium</span>
+                        <span className="text-slate-400">Kalsium</span>
                         <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Calcium") * (amount / 100))}mg</span>
                       </div>
                     </div>
@@ -274,13 +274,13 @@ const FoodSearch = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase">Health Analysis</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase">Analisis Kesehatan</p>
                   <HealthAnalyzer food={selectedFood} />
                   
                   <div className="pt-4 space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
                       <Scale className="h-3 w-3" />
-                      Adjust Portion (grams)
+                      Sesuaikan Porsi (gram)
                     </label>
                     <Input 
                       type="number" 
@@ -298,14 +298,14 @@ const FoodSearch = () => {
                   onClick={() => setSelectedFood(null)}
                   className="text-slate-400 hover:text-white"
                 >
-                  Cancel
+                  Batal
                 </Button>
                 <Button 
                   onClick={() => handleAdd(selectedFood, amount)}
                   className="bg-cyan-600 hover:bg-cyan-700 flex-1"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add to Daily Log
+                  Tambah ke Log Harian
                 </Button>
               </DialogFooter>
             </>
@@ -314,7 +314,7 @@ const FoodSearch = () => {
       </Dialog>
       
       <div className="text-center text-[10px] text-slate-600 mt-8">
-        Powered by <a href="https://fdc.nal.usda.gov/" target="_blank" className="underline">USDA FoodData Central</a>
+        Didukung oleh <a href="https://fdc.nal.usda.gov/" target="_blank" className="underline">USDA FoodData Central</a>
       </div>
     </div>
   );
