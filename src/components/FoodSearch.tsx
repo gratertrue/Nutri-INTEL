@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Plus, Loader2, ChevronRight, Scale, Filter, X, Apple, Beef, Wheat, Coffee } from 'lucide-react';
+import { Search, Plus, Loader2, ChevronRight, Key, Globe, AlertCircle, X } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -17,294 +17,223 @@ import {
 import HealthAnalyzer from './HealthAnalyzer';
 import { cn } from '@/lib/utils';
 
-const CATEGORIES = [
-  { id: 'fruit', label: 'Buah', icon: Apple, query: 'fruit' },
-  { id: 'protein', label: 'Protein', icon: Beef, query: 'meat poultry fish' },
-  { id: 'grains', label: 'Biji-bijian', icon: Wheat, query: 'grain bread pasta' },
-  { id: 'beverages', label: 'Minuman', icon: Coffee, query: 'beverage juice' },
-];
-
-const FILTERS = [
-  { id: 'high-protein', label: 'Tinggi Protein', minProtein: 15 },
-  { id: 'low-carb', label: 'Rendah Karbo', maxCarbs: 10 },
-  { id: 'low-cal', label: 'Rendah Kalori', maxCals: 150 },
-];
-
 const FoodSearch = () => {
   const [query, setQuery] = useState('');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('usda_api_key') || '');
   const [results, setResults] = useState<FoodItem[]>([]);
-  const [filteredResults, setFilteredResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [amount, setAmount] = useState(100);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [showKeyInput, setShowKeyInput] = useState(!apiKey);
   
   const { addLog } = useNutritionStore();
 
-  const handleSearch = async (searchQuery: string) => {
-    if (!searchQuery.trim()) return;
+  const saveApiKey = () => {
+    localStorage.setItem('usda_api_key', apiKey);
+    setShowKeyInput(false);
+    showSuccess("API Key disimpan secara lokal");
+  };
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!query.trim()) return;
+    if (!apiKey) {
+      setShowKeyInput(true);
+      showError("Masukkan API Key USDA terlebih dahulu");
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await searchFoods(searchQuery, 15);
+      const data = await searchFoods(query, apiKey, 12);
       setResults(data);
-      setFilteredResults(data);
-    } catch (err) {
-      showError("Gagal mengambil data makanan");
+      if (data.length === 0) showError("Tidak ada hasil ditemukan");
+    } catch (err: any) {
+      showError(err.message || "Gagal mencari makanan");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCategoryClick = (cat: typeof CATEGORIES[0]) => {
-    if (activeCategory === cat.id) {
-      setActiveCategory(null);
-      setResults([]);
-      setFilteredResults([]);
-    } else {
-      setActiveCategory(cat.id);
-      setQuery(cat.label);
-      handleSearch(cat.query);
-    }
-  };
-
-  useEffect(() => {
-    let filtered = [...results];
-    
-    if (activeFilter === 'high-protein') {
-      filtered = filtered.filter(f => getNutrientValue(f.foodNutrients, "Protein") >= 15);
-    } else if (activeFilter === 'low-carb') {
-      filtered = filtered.filter(f => getNutrientValue(f.foodNutrients, "Carbohydrate") <= 10);
-    } else if (activeFilter === 'low-cal') {
-      filtered = filtered.filter(f => getNutrientValue(f.foodNutrients, "Energy") <= 150);
-    }
-
-    setFilteredResults(filtered);
-  }, [activeFilter, results]);
-
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Berhasil menambahkan ${logAmount}g ${food.description} ke log!`);
+    showSuccess(`Ditambahkan: ${food.description}`);
     setSelectedFood(null);
-    setAmount(100);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="space-y-4">
-        <form onSubmit={(e) => { e.preventDefault(); handleSearch(query); }} className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <Input 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari 300.000+ makanan (Bhs Indonesia)..."
-              className="pl-10 bg-slate-900/50 border-slate-800 text-white"
-            />
-            {query && (
-              <button 
-                type="button"
-                onClick={() => { setQuery(''); setResults([]); setFilteredResults([]); setActiveCategory(null); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cari"}
-          </Button>
-        </form>
-
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map(cat => (
-            <Button
-              key={cat.id}
-              variant="outline"
-              size="sm"
-              onClick={() => handleCategoryClick(cat)}
-              className={cn(
-                "border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800",
-                activeCategory === cat.id && "bg-cyan-500/10 border-cyan-500/50 text-cyan-400"
-              )}
-            >
-              <cat.icon className="h-3.5 w-3.5 mr-2" />
-              {cat.label}
-            </Button>
-          ))}
-        </div>
-
-        {results.length > 0 && (
-          <div className="flex items-center gap-3 py-2 border-t border-slate-800">
-            <Filter className="h-4 w-4 text-slate-500" />
-            <div className="flex gap-2">
-              {FILTERS.map(f => (
-                <Badge
-                  key={f.id}
-                  variant="outline"
-                  onClick={() => setActiveFilter(activeFilter === f.id ? null : f.id)}
-                  className={cn(
-                    "cursor-pointer transition-colors",
-                    activeFilter === f.id 
-                      ? "bg-cyan-500 text-white border-cyan-500" 
-                      : "text-slate-500 border-slate-800 hover:border-slate-600"
-                  )}
-                >
-                  {f.label}
-                </Badge>
-              ))}
+    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
+      {/* API Key Management */}
+      {showKeyInput ? (
+        <Card className="bg-cyan-500/5 border-cyan-500/20 border-dashed">
+          <CardContent className="p-4 flex flex-col sm:flex-row gap-3 items-center">
+            <div className="flex-1 w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="h-4 w-4 text-cyan-400" />
+                <span className="text-xs font-bold text-cyan-400 uppercase">USDA API Key Required</span>
+              </div>
+              <Input 
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Masukkan API Key Anda..."
+                className="bg-slate-900 border-slate-800 text-white"
+              />
             </div>
-          </div>
-        )}
-      </div>
+            <Button onClick={saveApiKey} className="bg-cyan-600 hover:bg-cyan-700 w-full sm:w-auto mt-6 sm:mt-0">
+              Simpan Key
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex justify-end">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowKeyInput(true)}
+            className="text-[10px] text-slate-500 hover:text-cyan-400 uppercase font-bold"
+          >
+            <Key className="h-3 w-3 mr-1" /> Ganti API Key
+          </Button>
+        </div>
+      )}
 
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Input 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari makanan (Contoh: Nasi Goreng, Apel, Susu)..."
+            className="pl-10 bg-slate-900/50 border-slate-800 text-white h-12 text-lg"
+          />
+          {query && (
+            <button 
+              type="button"
+              onClick={() => { setQuery(''); setResults([]); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700 h-12 px-8">
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Cari"}
+        </Button>
+      </form>
+
+      {/* Results List */}
       <div className="grid grid-cols-1 gap-3">
-        {filteredResults.map((food) => {
+        {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
-          const calories = getNutrientValue(food.foodNutrients, "Energy");
-          const protein = getNutrientValue(food.foodNutrients, "Protein");
-          
           return (
             <Card 
               key={food.fdcId} 
-              className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all group cursor-pointer"
+              className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all group cursor-pointer overflow-hidden"
               onClick={() => setSelectedFood(food)}
             >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex-1 min-w-0 pr-4">
-                  <h3 className="text-white font-medium truncate group-hover:text-cyan-400 transition-colors">
-                    {food.description}
-                  </h3>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-800">
-                      {Math.round(calories)} kcal
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-500/20 bg-blue-500/5">
-                      {protein.toFixed(1)}g Protein
-                    </Badge>
-                    <div className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded",
-                      score > 70 ? 'bg-green-500/20 text-green-400' : 
-                      score > 40 ? 'bg-yellow-500/20 text-yellow-400' : 
-                      'bg-red-500/20 text-red-400'
-                    )}>
-                      Skor: {score}
+              <CardContent className="p-0 flex items-stretch">
+                <div className={cn(
+                  "w-1.5",
+                  score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500"
+                )} />
+                <div className="p-4 flex-1 flex items-center justify-between">
+                  <div className="min-w-0 pr-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Globe className="h-3 w-3 text-cyan-500" />
+                      <h3 className="text-white font-bold truncate text-lg">
+                        {food.description}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-500 italic truncate mb-2">
+                      Original: {food.descriptionEn}
+                    </p>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-[10px] border-slate-800 text-slate-400">
+                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px] border-slate-800 text-blue-400">
+                        {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
+                      </Badge>
                     </div>
                   </div>
+                  <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-slate-600 group-hover:text-cyan-400 transition-colors shrink-0" />
               </CardContent>
             </Card>
           );
         })}
-        
-        {!loading && filteredResults.length === 0 && results.length > 0 && (
-          <div className="text-center py-12 text-slate-500">
-            Tidak ada hasil yang cocok dengan filter Anda.
-          </div>
-        )}
 
-        {!loading && results.length === 0 && !activeCategory && (
-          <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-2xl">
-            <Search className="h-12 w-12 text-slate-800 mx-auto mb-4" />
-            <p className="text-slate-500">Cari makanan atau pilih kategori di atas</p>
+        {!loading && results.length === 0 && (
+          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl">
+            <div className="bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-slate-700" />
+            </div>
+            <p className="text-slate-500 font-medium">Masukkan kata kunci dalam Bahasa Indonesia</p>
+            <p className="text-[10px] text-slate-600 mt-1 uppercase tracking-widest">Powered by USDA & MyMemory</p>
           </div>
         )}
       </div>
 
+      {/* Detail Dialog */}
       <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
         <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-2xl">
           {selectedFood && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-cyan-400">{selectedFood.description}</DialogTitle>
-                <p className="text-slate-400 text-sm">Informasi gizi per {amount}g</p>
+                <div className="flex items-center gap-2 text-cyan-400 mb-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Detail Nutrisi Terjemahan</span>
+                </div>
+                <DialogTitle className="text-2xl font-bold">{selectedFood.description}</DialogTitle>
+                <p className="text-slate-500 text-xs italic">Asli: {selectedFood.descriptionEn}</p>
               </DialogHeader>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Kalori</p>
-                      <p className="text-xl font-bold text-white">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Kalori</p>
+                      <p className="text-2xl font-black text-white">
                         {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
                       </p>
                     </div>
-                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Protein</p>
-                      <p className="text-xl font-bold text-blue-400">
+                    <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
+                      <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Protein</p>
+                      <p className="text-2xl font-black text-blue-400">
                         {(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g
                       </p>
                     </div>
-                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Karbo</p>
-                      <p className="text-xl font-bold text-green-400">
-                        {(getNutrientValue(selectedFood.foodNutrients, "Carbohydrate") * (amount / 100)).toFixed(1)}g
-                      </p>
-                    </div>
-                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800">
-                      <p className="text-[10px] text-slate-500 uppercase font-bold">Lemak</p>
-                      <p className="text-xl font-bold text-yellow-400">
-                        {(getNutrientValue(selectedFood.foodNutrients, "Total lipid (fat)") * (amount / 100)).toFixed(1)}g
-                      </p>
-                    </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-slate-500 uppercase">Mikronutrisi</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                      <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Serat</span>
-                        <span>{(getNutrientValue(selectedFood.foodNutrients, "Fiber") * (amount / 100)).toFixed(1)}g</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Gula</span>
-                        <span>{(getNutrientValue(selectedFood.foodNutrients, "Sugars") * (amount / 100)).toFixed(1)}g</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Natrium</span>
-                        <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Sodium") * (amount / 100))}mg</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-800 py-1">
-                        <span className="text-slate-400">Kalsium</span>
-                        <span>{Math.round(getNutrientValue(selectedFood.foodNutrients, "Calcium") * (amount / 100))}mg</span>
-                      </div>
-                    </div>
-                  </div>
+                  <HealthAnalyzer food={selectedFood} />
                 </div>
 
                 <div className="space-y-4">
-                  <p className="text-xs font-bold text-slate-500 uppercase">Analisis Kesehatan</p>
-                  <HealthAnalyzer food={selectedFood} />
-                  
-                  <div className="pt-4 space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
-                      <Scale className="h-3 w-3" />
-                      Sesuaikan Porsi (gram)
-                    </label>
+                  <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
+                    <label className="text-[10px] text-slate-500 uppercase font-bold mb-2 block">Porsi (Gram)</label>
                     <Input 
                       type="number" 
                       value={amount}
                       onChange={(e) => setAmount(Number(e.target.value))}
-                      className="bg-slate-900 border-slate-800 text-white"
+                      className="bg-slate-950 border-slate-800 text-white text-center text-xl font-bold"
                     />
+                  </div>
+                  <div className="flex items-start gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
+                    <AlertCircle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-slate-400">
+                      Data gizi berasal dari database USDA. Terjemahan dilakukan secara otomatis dan mungkin tidak 100% akurat untuk istilah teknis.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <DialogFooter className="sm:justify-between gap-4">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setSelectedFood(null)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  Batal
-                </Button>
+              <DialogFooter>
                 <Button 
                   onClick={() => handleAdd(selectedFood, amount)}
-                  className="bg-cyan-600 hover:bg-cyan-700 flex-1"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 h-12 text-lg font-bold"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-5 w-5 mr-2" />
                   Tambah ke Log Harian
                 </Button>
               </DialogFooter>
@@ -312,10 +241,6 @@ const FoodSearch = () => {
           )}
         </DialogContent>
       </Dialog>
-      
-      <div className="text-center text-[10px] text-slate-600 mt-8">
-        Didukung oleh <a href="https://fdc.nal.usda.gov/" target="_blank" className="underline">USDA FoodData Central</a>
-      </div>
     </div>
   );
 };
