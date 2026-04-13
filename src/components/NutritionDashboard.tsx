@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
-import { Flame, Target, Trophy, Zap, AlertTriangle } from 'lucide-react';
+import { Flame, Target, Trophy, Zap, AlertTriangle, History } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SmartSuggestions from './SmartSuggestions';
 import GrowthImpactInfo from './GrowthImpactInfo';
@@ -11,7 +11,7 @@ import SmartNutritionAnalyzer from './SmartNutritionAnalyzer';
 import { cn } from '@/lib/utils';
 
 const NutritionDashboard = () => {
-  const { logs, profile, points, achievements } = useNutritionStore();
+  const { logs, profile, points, achievements, getAverageNutrients } = useNutritionStore();
   
   const today = new Date().setHours(0,0,0,0);
   const todayLogs = logs.filter(l => new Date(l.timestamp).setHours(0,0,0,0) === today);
@@ -25,8 +25,10 @@ const NutritionDashboard = () => {
     return acc;
   }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  const isCarbsLow = totals.carbs < profile.carbsGoal;
-  const isProteinLow = totals.protein < profile.proteinGoal;
+  // Analisis Tren (Rata-rata 3 hari)
+  const avg = getAverageNutrients(3);
+  const isCarbsLowTrend = avg && avg.carbs < profile.carbsGoal;
+  const isProteinLowTrend = avg && avg.protein < profile.proteinGoal;
 
   const macroData = [
     { name: 'Protein', value: totals.protein, color: '#3b82f6' },
@@ -36,18 +38,21 @@ const NutritionDashboard = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Peringatan Gizi Section */}
-      {(isCarbsLow || isProteinLow) && todayLogs.length > 0 && (
-        <Card className="bg-amber-500/10 border-amber-500/20 backdrop-blur-xl">
+      {/* Peringatan Gizi Berdasarkan Tren */}
+      {(isCarbsLowTrend || isProteinLowTrend) && (
+        <Card className="bg-amber-500/10 border-amber-500/20 backdrop-blur-xl border-l-4 border-l-amber-500">
           <CardContent className="p-4 flex items-start gap-4">
             <div className="p-2 bg-amber-500/20 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <History className="h-5 w-5 text-amber-500" />
             </div>
             <div className="flex-1 space-y-1">
-              <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Peringatan Gizi</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Analisis Tren 3 Hari</h3>
+                <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-bold">DEFISIENSI TERDETEKSI</span>
+              </div>
               <div className="text-xs text-slate-300 space-y-1">
-                {isCarbsLow && <p>• Karbohidrat Anda ({Math.round(totals.carbs)}g) di bawah kebutuhan minimal ({profile.carbsGoal}g).</p>}
-                {isProteinLow && <p>• Protein Anda ({Math.round(totals.protein)}g) di bawah kebutuhan minimal ({profile.proteinGoal}g).</p>}
+                {isCarbsLowTrend && <p>• Rata-rata Karbohidrat Anda ({Math.round(avg.carbs)}g) konsisten di bawah target harian.</p>}
+                {isProteinLowTrend && <p>• Rata-rata Protein Anda ({Math.round(avg.protein)}g) konsisten di bawah target harian.</p>}
               </div>
               <div className="pt-2">
                 <GrowthImpactInfo />
@@ -104,7 +109,7 @@ const NutritionDashboard = () => {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
             <CardHeader>
-              <CardTitle className="text-white">Distribusi Makro</CardTitle>
+              <CardTitle className="text-white">Distribusi Makro Hari Ini</CardTitle>
             </CardHeader>
             <CardContent className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">

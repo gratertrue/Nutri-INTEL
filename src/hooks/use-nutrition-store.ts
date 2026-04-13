@@ -265,6 +265,38 @@ export function useNutritionStore() {
     };
   };
 
+  const getAverageNutrients = (days: number = 3) => {
+    const now = new Date();
+    const cutoff = new Date(now.setDate(now.getDate() - days)).getTime();
+    const recentLogs = logs.filter(l => l.timestamp >= cutoff);
+    
+    if (recentLogs.length === 0) return null;
+
+    const totals = recentLogs.reduce((acc, log) => {
+      const factor = log.amount / 100;
+      acc.calories += getNutrientValue(log.food.foodNutrients, "Energy") * factor;
+      acc.protein += getNutrientValue(log.food.foodNutrients, "Protein") * factor;
+      acc.carbs += getNutrientValue(log.food.foodNutrients, "Carbohydrate") * factor;
+      acc.fat += getNutrientValue(log.food.foodNutrients, "Total lipid (fat)") * factor;
+      acc.vitaminC += getNutrientValue(log.food.foodNutrients, "Vitamin C") * factor;
+      acc.iron += getNutrientValue(log.food.foodNutrients, "Iron") * factor;
+      acc.calcium += getNutrientValue(log.food.foodNutrients, "Calcium") * factor;
+      acc.vitaminA += getNutrientValue(log.food.foodNutrients, "Vitamin A") * factor;
+      return acc;
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0, vitaminC: 0, iron: 0, calcium: 0, vitaminA: 0 });
+
+    return {
+      calories: totals.calories / days,
+      protein: totals.protein / days,
+      carbs: totals.carbs / days,
+      fat: totals.fat / days,
+      vitaminC: totals.vitaminC / days,
+      iron: totals.iron / days,
+      calcium: totals.calcium / days,
+      vitaminA: totals.vitaminA / days,
+    };
+  };
+
   return { 
     profile, setProfile, 
     logs, addLog, 
@@ -274,7 +306,7 @@ export function useNutritionStore() {
     waterIntake, addWater, setWaterIntake,
     points, achievements, 
     addPoints, calculateBMI, calculateRecommendedCalories,
-    getAKGGoals
+    getAKGGoals, getAverageNutrients
   };
 }
 

@@ -1,32 +1,30 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { getNutrientValue } from '@/lib/usda-api';
-import { Brain, AlertCircle, CheckCircle2, Info, ChevronRight, BookOpen } from 'lucide-react';
+import { Brain, AlertCircle, CheckCircle2, Info, ChevronRight, BookOpen, History } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 const SmartNutritionAnalyzer = () => {
-  const { logs, getAKGGoals } = useNutritionStore();
+  const { getAKGGoals, getAverageNutrients, logs } = useNutritionStore();
   const akg = getAKGGoals();
+  const avg = getAverageNutrients(3); // Rata-rata 3 hari
 
-  const today = new Date().setHours(0,0,0,0);
-  const todayLogs = logs.filter(l => new Date(l.timestamp).setHours(0,0,0,0) === today);
-
-  const totals = todayLogs.reduce((acc, log) => {
-    const factor = log.amount / 100;
-    acc.vitaminC += getNutrientValue(log.food.foodNutrients, "Vitamin C") * factor;
-    acc.iron += getNutrientValue(log.food.foodNutrients, "Iron") * factor;
-    acc.calcium += getNutrientValue(log.food.foodNutrients, "Calcium") * factor;
-    acc.vitaminA += getNutrientValue(log.food.foodNutrients, "Vitamin A") * factor;
-    acc.zinc += getNutrientValue(log.food.foodNutrients, "Zinc") * factor;
-    return acc;
-  }, { vitaminC: 0, iron: 0, calcium: 0, vitaminA: 0, zinc: 0 });
+  if (!avg || logs.length === 0) {
+    return (
+      <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
+        <CardContent className="p-8 text-center text-slate-500">
+          <History className="h-8 w-8 mx-auto mb-2 opacity-20" />
+          <p className="text-sm">Catat makanan selama beberapa hari untuk melihat analisis tren nutrisi jangka panjang.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const micros = [
     { 
       name: 'Vitamin C', 
-      current: totals.vitaminC, 
+      current: avg.vitaminC, 
       target: akg.vitaminC, 
       unit: 'mg', 
       impact: 'Mendukung sistem imun dan produksi kolagen.',
@@ -34,7 +32,7 @@ const SmartNutritionAnalyzer = () => {
     },
     { 
       name: 'Zat Besi', 
-      current: totals.iron, 
+      current: avg.iron, 
       target: akg.iron, 
       unit: 'mg', 
       impact: 'Penting untuk transportasi oksigen dan energi.',
@@ -42,7 +40,7 @@ const SmartNutritionAnalyzer = () => {
     },
     { 
       name: 'Kalsium', 
-      current: totals.calcium, 
+      current: avg.calcium, 
       target: akg.calcium, 
       unit: 'mg', 
       impact: 'Menjaga kepadatan tulang dan fungsi otot.',
@@ -50,7 +48,7 @@ const SmartNutritionAnalyzer = () => {
     },
     { 
       name: 'Vitamin A', 
-      current: totals.vitaminA, 
+      current: avg.vitaminA, 
       target: akg.vitaminA, 
       unit: 'mcg', 
       impact: 'Mendukung kesehatan mata dan regenerasi sel.',
@@ -63,7 +61,7 @@ const SmartNutritionAnalyzer = () => {
       <CardHeader className="pb-2">
         <CardTitle className="text-white flex items-center gap-2 text-lg">
           <Brain className="h-5 w-5 text-purple-400" />
-          Analisis Nutrisi Pintar
+          Analisis Tren Nutrisi (3 Hari)
         </CardTitle>
         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Berdasarkan AKG Indonesia & Riset Kesehatan</p>
       </CardHeader>
@@ -84,12 +82,12 @@ const SmartNutritionAnalyzer = () => {
                   )}
                 </div>
                 <span className="text-[10px] text-slate-400">
-                  {Math.round(m.current)} / {m.target} {m.unit}
+                  Rata-rata: {Math.round(m.current)} / {m.target} {m.unit}
                 </span>
               </div>
               <Progress value={percentage} className={cn("h-1.5", isLow ? "bg-slate-800" : "bg-slate-800")} />
               
-              {isLow && todayLogs.length > 0 && (
+              {isLow && (
                 <div className="mt-2 space-y-2 animate-in slide-in-from-top-1 duration-300">
                   <div className="flex gap-2">
                     <Info className="h-3 w-3 text-cyan-400 shrink-0 mt-0.5" />
@@ -112,7 +110,7 @@ const SmartNutritionAnalyzer = () => {
         <div className="pt-2 border-t border-slate-800">
           <div className="flex items-center gap-2 text-slate-500">
             <ChevronRight className="h-3 w-3" />
-            <p className="text-[9px] italic">Data dianalisis secara real-time berdasarkan literatur nutrisi terkini.</p>
+            <p className="text-[9px] italic">Analisis tren membantu mendeteksi defisiensi nutrisi yang konsisten.</p>
           </div>
         </div>
       </CardContent>
