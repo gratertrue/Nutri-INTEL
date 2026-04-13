@@ -69,3 +69,8 @@ body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
 }
+
+/* Ensure buttons and inputs are easy to tap on Android */
+button, input, select {
+  @apply touch-manipulation;
+}
