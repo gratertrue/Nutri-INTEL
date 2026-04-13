@@ -4,15 +4,23 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { getNutrientValue } from '@/lib/usda-api';
-import { Target, AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Target, AlertCircle, CheckCircle2, TrendingUp, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const Goals = () => {
   const { logs, profile } = useNutritionStore();
 
-  const today = new Date().setHours(0, 0, 0, 0);
-  const todayLogs = logs.filter(l => new Date(l.timestamp).setHours(0, 0, 0, 0) === today);
+  // Selalu ambil waktu sekarang untuk filter hari ini
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayTime = today.getTime();
+
+  const todayLogs = logs.filter(l => {
+    const logDate = new Date(l.timestamp);
+    logDate.setHours(0, 0, 0, 0);
+    return logDate.getTime() === todayTime;
+  });
 
   const totalCalories = todayLogs.reduce((acc, log) => {
     const factor = log.amount / 100;
@@ -27,9 +35,15 @@ const Goals = () => {
   return (
     <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl overflow-hidden">
       <CardHeader className="pb-2">
-        <CardTitle className="text-white flex items-center gap-2 text-lg">
-          <Target className="h-5 w-5 text-cyan-400" />
-          Target Harian
+        <CardTitle className="text-white flex items-center justify-between text-lg">
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-cyan-400" />
+            Target Harian
+          </div>
+          <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase">
+            <Clock className="h-3 w-3" />
+            Real-time
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
