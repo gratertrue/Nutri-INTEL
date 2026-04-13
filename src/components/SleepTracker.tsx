@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Moon, Play, Square, RotateCcw, Clock } from 'lucide-react';
+import { Moon, Play, Square, RotateCcw, Clock, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const SleepTracker = () => {
   const { wearableData, toggleSleep, resetSleep } = useNutritionStore();
-  const [currentHours, setCurrentHours] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
-  // Fungsi pembantu untuk memformat desimal jam ke Jam & Menit
-  const formatTime = (hoursDecimal: number) => {
-    const totalMinutes = Math.round(hoursDecimal * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return { h, m };
+  // Fungsi pembantu untuk memformat milidetik ke Jam & Menit
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return { h, m, s };
   };
 
   useEffect(() => {
@@ -22,92 +24,111 @@ const SleepTracker = () => {
     
     if (wearableData.isSleeping && wearableData.sleepStartTime) {
       const update = () => {
-        const diffMs = Date.now() - wearableData.sleepStartTime!;
-        setCurrentHours(diffMs / (1000 * 60 * 60));
+        setElapsed(Date.now() - wearableData.sleepStartTime!);
       };
       
-      interval = setInterval(update, 10000); // Update setiap 10 detik
+      interval = setInterval(update, 1000); // Update setiap detik
       update();
     } else {
-      setCurrentHours(0);
+      setElapsed(0);
     }
 
     return () => clearInterval(interval);
   }, [wearableData.isSleeping, wearableData.sleepStartTime]);
 
-  const displayTime = wearableData.isSleeping ? formatTime(currentHours) : formatTime(wearableData.sleepHours);
+  const current = formatDuration(elapsed);
 
   return (
     <Card className={cn(
-      "bg-slate-900/50 border-slate-800 backdrop-blur-xl transition-all duration-500 overflow-hidden relative",
+      "bg-slate-900/50 border-slate-800 backdrop-blur-xl transition-all duration-500 overflow-hidden flex flex-col",
       wearableData.isSleeping && "border-purple-500/50 bg-purple-500/10"
     )}>
-      {wearableData.isSleeping && (
-        <div className="absolute top-0 left-0 w-full h-1 bg-purple-500 animate-pulse" />
-      )}
-      
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "p-2.5 rounded-xl transition-colors",
-              wearableData.isSleeping ? "bg-purple-500/20" : "bg-slate-800"
-            )}>
-              <Moon className={cn("h-5 w-5", wearableData.isSleeping ? "text-purple-300 animate-pulse" : "text-slate-400")} />
-            </div>
-            <div>
-              <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Pelacak Tidur</p>
-              <p className="text-sm font-bold text-white">
-                {wearableData.isSleeping ? "Sedang Tidur..." : "Tidak Aktif"}
-              </p>
-            </div>
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-sm font-bold text-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Moon className={cn("h-4 w-4", wearableData.isSleeping ? "text-purple-400 animate-pulse" : "text-slate-400")} />
+            Pelacak Tidur
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={resetSleep}
-            className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-400/10"
-            title="Reset Data Tidur"
+            className="h-7 w-7 text-slate-500 hover:text-red-400"
+            title="Reset Semua Data"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5" />
           </Button>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="p-4 pt-0 space-y-4 flex-1 flex flex-col">
+        <div className="bg-slate-950/50 rounded-2xl p-4 border border-slate-800 text-center">
+          <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">
+            {wearableData.isSleeping ? "Waktu Berjalan" : "Sesi Terakhir"}
+          </p>
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="text-4xl font-black text-white">
+              {wearableData.isSleeping ? current.h : Math.floor(wearableData.sleepHours)}
+            </span>
+            <span className="text-sm font-bold text-slate-500 mr-1">j</span>
+            <span className="text-4xl font-black text-white">
+              {wearableData.isSleeping ? current.m : Math.round((wearableData.sleepHours % 1) * 60)}
+            </span>
+            <span className="text-sm font-bold text-slate-500">m</span>
+            {wearableData.isSleeping && (
+              <>
+                <span className="text-2xl font-bold text-purple-500/50 ml-1">:</span>
+                <span className="text-2xl font-bold text-purple-500/50">
+                  {current.s.toString().padStart(2, '0')}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-end justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-slate-500">
-              <Clock className="h-3 w-3" />
-              <span className="text-[10px] uppercase font-medium">Total Durasi</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <p className="text-3xl font-black text-white">{displayTime.h}</p>
-              <span className="text-sm font-bold text-slate-500 mr-1">j</span>
-              <p className="text-3xl font-black text-white">{displayTime.m}</p>
-              <span className="text-sm font-bold text-slate-500">m</span>
-            </div>
-          </div>
-
+        <div className="flex gap-2">
           <Button 
             onClick={toggleSleep}
-            variant={wearableData.isSleeping ? "destructive" : "secondary"}
             className={cn(
-              "gap-2 rounded-xl px-4 h-11 font-bold shadow-lg transition-all",
-              !wearableData.isSleeping && "bg-purple-600 hover:bg-purple-700 text-white border-none"
+              "flex-1 h-12 font-bold rounded-xl shadow-lg transition-all",
+              wearableData.isSleeping 
+                ? "bg-red-500 hover:bg-red-600 text-white" 
+                : "bg-purple-600 hover:bg-purple-700 text-white"
             )}
           >
             {wearableData.isSleeping ? (
-              <><Square className="h-4 w-4 fill-current" /> Bangun</>
+              <><Square className="h-4 w-4 mr-2 fill-current" /> Berhenti Tidur</>
             ) : (
-              <><Play className="h-4 w-4 fill-current" /> Mulai Tidur</>
+              <><Play className="h-4 w-4 mr-2 fill-current" /> Mulai Tidur</>
             )}
           </Button>
         </div>
 
-        {wearableData.isSleeping && (
-          <p className="text-[9px] text-purple-400 mt-3 text-center font-medium animate-pulse">
-            Waktu tetap berjalan di latar belakang.
-          </p>
-        )}
+        <div className="space-y-2 flex-1 flex flex-col min-h-0">
+          <div className="flex items-center gap-2 text-slate-500 px-1">
+            <History className="h-3 w-3" />
+            <span className="text-[10px] uppercase font-bold">Riwayat Sesi</span>
+          </div>
+          <ScrollArea className="flex-1 h-[120px] pr-3">
+            <div className="space-y-2">
+              {wearableData.sleepHistory.length === 0 ? (
+                <p className="text-[10px] text-slate-600 text-center py-4 italic">Belum ada riwayat sesi</p>
+              ) : (
+                wearableData.sleepHistory.map((session) => {
+                  const date = new Date(session.endTime).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                  const h = Math.floor(session.durationHours);
+                  const m = Math.round((session.durationHours % 1) * 60);
+                  return (
+                    <div key={session.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-800/30 border border-slate-800/50">
+                      <span className="text-[10px] font-medium text-slate-400">{date}</span>
+                      <span className="text-[10px] font-bold text-white">{h}j {m}m</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

@@ -4,14 +4,14 @@ import confetti from 'canvas-confetti';
 
 export interface UserProfile {
   name: string;
-  weight: number; // kg
-  height: number; // cm
+  weight: number;
+  height: number;
   age: number;
   gender: 'male' | 'female' | 'other';
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   calorieGoal: number;
   proteinGoal: number;
-  waterGoal: number; // ml
+  waterGoal: number;
   goal: 'weight_loss' | 'muscle_gain' | 'maintenance';
 }
 
@@ -28,6 +28,13 @@ export interface LogEntry {
   timestamp: number;
 }
 
+export interface SleepSession {
+  id: string;
+  startTime: number;
+  endTime: number;
+  durationHours: number;
+}
+
 export interface Achievement {
   id: string;
   title: string;
@@ -41,6 +48,7 @@ export interface WearableData {
   sleepHours: number;
   isSleeping: boolean;
   sleepStartTime: number | null;
+  sleepHistory: SleepSession[];
 }
 
 const INITIAL_PROFILE: UserProfile = {
@@ -87,7 +95,7 @@ export function useNutritionStore() {
 
   const [wearableData, setWearableData] = useState<WearableData>(() => {
     const saved = localStorage.getItem('nutrition_wearable');
-    return saved ? JSON.parse(saved) : { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null };
+    return saved ? JSON.parse(saved) : { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
   });
 
   const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
@@ -123,17 +131,26 @@ export function useNutritionStore() {
   const toggleSleep = () => {
     setWearableData(prev => {
       if (!prev.isSleeping) {
-        // Mulai tidur: simpan waktu sekarang
         return { ...prev, isSleeping: true, sleepStartTime: Date.now() };
       } else {
-        // Bangun: hitung selisih waktu dari start sampai sekarang
-        const durationMs = Date.now() - (prev.sleepStartTime || Date.now());
-        const durationHours = Number((durationMs / (1000 * 60 * 60)).toFixed(1));
+        const endTime = Date.now();
+        const startTime = prev.sleepStartTime || endTime;
+        const durationMs = endTime - startTime;
+        const durationHours = Number((durationMs / (1000 * 60 * 60)).toFixed(2));
+        
+        const newSession: SleepSession = {
+          id: Math.random().toString(36).substr(2, 9),
+          startTime,
+          endTime,
+          durationHours
+        };
+
         return { 
           ...prev, 
           isSleeping: false, 
           sleepStartTime: null, 
-          sleepHours: Number((prev.sleepHours + durationHours).toFixed(1))
+          sleepHours: Number((prev.sleepHours + durationHours).toFixed(1)),
+          sleepHistory: [newSession, ...prev.sleepHistory].slice(0, 10) // Simpan 10 riwayat terakhir
         };
       }
     });
@@ -144,7 +161,8 @@ export function useNutritionStore() {
       ...prev,
       isSleeping: false,
       sleepStartTime: null,
-      sleepHours: 0
+      sleepHours: 0,
+      sleepHistory: []
     }));
   };
 
