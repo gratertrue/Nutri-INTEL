@@ -95,7 +95,12 @@ export function useNutritionStore() {
 
   const [wearableData, setWearableData] = useState<WearableData>(() => {
     const saved = localStorage.getItem('nutrition_wearable');
-    return saved ? JSON.parse(saved) : { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
+    const defaultData = { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaultData, ...parsed, sleepHistory: parsed.sleepHistory || [] };
+    }
+    return defaultData;
   });
 
   const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
@@ -145,12 +150,13 @@ export function useNutritionStore() {
           durationHours
         };
 
+        const history = prev.sleepHistory || [];
         return { 
           ...prev, 
           isSleeping: false, 
           sleepStartTime: null, 
           sleepHours: Number((prev.sleepHours + durationHours).toFixed(1)),
-          sleepHistory: [newSession, ...prev.sleepHistory].slice(0, 10) // Simpan 10 riwayat terakhir
+          sleepHistory: [newSession, ...history].slice(0, 10)
         };
       }
     });

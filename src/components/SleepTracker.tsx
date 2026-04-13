@@ -37,6 +37,7 @@ const SleepTracker = () => {
   }, [wearableData.isSleeping, wearableData.sleepStartTime]);
 
   const current = formatDuration(elapsed);
+  const history = wearableData.sleepHistory || [];
 
   return (
     <Card className={cn(
@@ -111,10 +112,10 @@ const SleepTracker = () => {
           </div>
           <ScrollArea className="flex-1 h-[120px] pr-3">
             <div className="space-y-2">
-              {wearableData.sleepHistory.length === 0 ? (
+              {history.length === 0 ? (
                 <p className="text-[10px] text-slate-600 text-center py-4 italic">Belum ada riwayat sesi</p>
               ) : (
-                wearableData.sleepHistory.map((session) => {
+                history.map((session) => {
                   const date = new Date(session.endTime).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
                   const h = Math.floor(session.durationHours);
                   const m = Math.round((session.durationHours % 1) * 60);
