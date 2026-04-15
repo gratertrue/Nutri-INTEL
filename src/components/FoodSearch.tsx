@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
+import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -23,43 +23,12 @@ const FoodSearch = () => {
   const [results, setResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
+  const [translatedName, setTranslatedName] = useState('');
+  const [translating, setTranslating] = useState(false);
   const [amount, setAmount] = useState(100);
-  const [activeIndex, setActiveIndex] = useState(-1);
   
   const { addLog } = useNutritionStore();
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const smartSort = (items: FoodItem[], searchTerm: string) => {
-    const q = searchTerm.toLowerCase();
-    return items.map(item => {
-      let score = 0;
-      const desc = item.description.toLowerCase();
-      const descId = item.descriptionId.toLowerCase();
-      
-      if (desc === q || descId === q) score += 100;
-      else if (desc.startsWith(q) || descId.startsWith(q)) score += 50;
-      else if (desc.includes(q) || descId.includes(q)) score += 10;
-      
-      return { item, score };
-    })
-    .filter(res => res.score > 0 || searchTerm === "")
-    .sort((a, b) => b.score - a.score)
-    .map(res => res.item);
-  };
-
-  const highlightText = (text: string, highlight: string) => {
-    if (!highlight.trim()) return text;
-    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
-    return (
-      <span>
-        {parts.map((part, i) => 
-          part.toLowerCase() === highlight.toLowerCase() ? (
-            <span key={i} className="text-cyan-400 font-black underline decoration-cyan-500/30">{part}</span>
-          ) : part
-        )}
-      </span>
-    );
-  };
 
   const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -67,21 +36,15 @@ const FoodSearch = () => {
       return;
     }
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
     setLoading(true);
     try {
-      const data = await searchFoods(searchQuery, 12);
-      const sortedResults = smartSort(data, searchQuery);
-      setResults(sortedResults.length > 0 ? sortedResults : data);
-      setActiveIndex(-1);
+      const data = await searchFoods(searchQuery, 15);
+      setResults(data);
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        showError("Gagal mencari makanan");
-      }
+      if (err.name !== 'AbortError') showError("Gagal mencari makanan");
     } finally {
       setLoading(false);
     }
@@ -90,29 +53,29 @@ const FoodSearch = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query) performSearch(query);
-    }, 300);
-
+    }, 400); // Debounce lebih lama untuk akurasi pengetikan
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (results.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setActiveIndex(prev => (prev < results.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      setSelectedFood(results[activeIndex]);
+  const handleSelectFood = async (food: FoodItem) => {
+    setSelectedFood(food);
+    setTranslatedName('');
+    setTranslating(true);
+    
+    // Terjemahkan nama HANYA saat dipilih (On-Demand)
+    try {
+      const idName = await translateText(food.description, 'en|id');
+      setTranslatedName(idName);
+    } catch (e) {
+      setTranslatedName(food.description);
+    } finally {
+      setTranslating(false);
     }
   };
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Ditambahkan: ${food.description}`);
+    showSuccess(`Ditambahkan ke log harian!`);
     setSelectedFood(null);
   };
 
@@ -125,8 +88,7 @@ const FoodSearch = () => {
         <Input 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Cari makanan (English or Indonesia)..."
+          placeholder="Cari makanan (English/Indonesia)..."
           className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
         />
         {query && (
@@ -140,50 +102,37 @@ const FoodSearch = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {results.map((food, index) => {
+        {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
-          const isActive = index === activeIndex;
-          
           return (
             <Card 
               key={food.fdcId} 
-              className={cn(
-                "bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all group cursor-pointer overflow-hidden",
-                isActive && "border-cyan-500 ring-1 ring-cyan-500/50 bg-slate-800/80 translate-x-1"
-              )}
-              onClick={() => setSelectedFood(food)}
+              className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer overflow-hidden group"
+              onClick={() => handleSelectFood(food)}
             >
               <CardContent className="p-0 flex items-stretch">
                 <div className={cn(
-                  "w-1.5 transition-all",
-                  score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500",
-                  isActive && "w-3"
+                  "w-1.5 transition-all group-hover:w-3",
+                  score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500"
                 )} />
                 <div className="p-4 flex-1 flex items-center justify-between">
                   <div className="min-w-0 pr-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Globe className={cn("h-3.5 w-3.5", isActive ? "text-cyan-400" : "text-slate-500")} />
-                      <h3 className="text-white font-bold truncate text-lg">
-                        {highlightText(food.description, query)}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic truncate mb-2">
-                      <Languages className="h-3 w-3" />
-                      <span>Nama Lokal: {highlightText(food.descriptionId, query)}</span>
-                    </div>
-                    <div className="flex gap-2">
+                    <h3 className="text-white font-bold truncate text-lg group-hover:text-cyan-400 transition-colors">
+                      {food.description}
+                    </h3>
+                    <div className="flex gap-2 mt-2">
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
                         {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
                       </Badge>
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
                         {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
                       </Badge>
+                      {food.dataType === 'Foundation' && (
+                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] border-cyan-500/30">VERIFIED</Badge>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isActive && <span className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest animate-pulse">Enter to select</span>}
-                    <ChevronRight className={cn("h-5 w-5 transition-colors", isActive ? "text-cyan-400" : "text-slate-700")} />
-                  </div>
+                  <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
                 </div>
               </CardContent>
             </Card>
@@ -192,21 +141,8 @@ const FoodSearch = () => {
 
         {!loading && query && results.length === 0 && (
           <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
-            <div className="bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-              <AlertCircle className="h-8 w-8 text-slate-700" />
-            </div>
+            <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
             <p className="text-slate-400 font-bold text-lg">Makanan tidak ditemukan</p>
-            <p className="text-sm text-slate-600 mt-1">Coba kata kunci lain atau periksa ejaan Anda.</p>
-          </div>
-        )}
-
-        {!query && (
-          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl">
-            <div className="bg-slate-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="h-8 w-8 text-slate-700" />
-            </div>
-            <p className="text-slate-500 font-medium">Mulai mengetik untuk mencari nutrisi makanan</p>
-            <p className="text-[10px] text-slate-600 mt-1 uppercase tracking-widest">Pencarian Real-time & Cerdas</p>
           </div>
         )}
       </div>
@@ -217,20 +153,20 @@ const FoodSearch = () => {
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 text-cyan-400 mb-1">
-                  <Globe className="h-4 w-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Detail Nutrisi Lengkap</span>
+                  <Zap className="h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Analisis Nutrisi</span>
                 </div>
                 <DialogTitle className="text-2xl font-bold">{selectedFood.description}</DialogTitle>
                 <div className="flex items-center gap-1.5 text-slate-500 text-xs italic">
                   <Languages className="h-3 w-3" />
-                  <span>Nama Lokal: {selectedFood.descriptionId}</span>
+                  <span>{translating ? "Menerjemahkan..." : `Nama Lokal: ${translatedName}`}</span>
                 </div>
               </DialogHeader>
 
               <div className="flex-1 overflow-hidden py-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
                   <div className="space-y-6">
-                    <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 shadow-inner">
+                    <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
                       <label className="text-[10px] text-slate-500 uppercase font-bold mb-2 block">Porsi (Gram)</label>
                       <Input 
                         type="number" 
@@ -241,13 +177,13 @@ const FoodSearch = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center shadow-lg">
+                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
                         <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Kalori</p>
                         <p className="text-2xl font-black text-white">
                           {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
                         </p>
                       </div>
-                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center shadow-lg">
+                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
                         <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Protein</p>
                         <p className="text-2xl font-black text-blue-400">
                           {(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g
@@ -261,9 +197,9 @@ const FoodSearch = () => {
                   <div className="flex flex-col h-full">
                     <div className="flex items-center gap-2 mb-3">
                       <ListFilter className="h-4 w-4 text-cyan-400" />
-                      <span className="text-xs font-bold text-slate-400 uppercase">Daftar Nutrisi Lengkap</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase">Rincian Nutrisi</span>
                     </div>
-                    <ScrollArea className="flex-1 bg-slate-900/30 rounded-2xl border border-slate-800 p-4 shadow-inner">
+                    <ScrollArea className="flex-1 bg-slate-900/30 rounded-2xl border border-slate-800 p-4">
                       <div className="space-y-3">
                         {selectedFood.foodNutrients
                           .filter(n => n.value > 0)
@@ -284,10 +220,10 @@ const FoodSearch = () => {
               <DialogFooter className="pt-4">
                 <Button 
                   onClick={() => handleAdd(selectedFood, amount)}
-                  className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 h-14 text-lg font-bold rounded-2xl shadow-xl"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 h-14 text-lg font-bold rounded-2xl"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Tambah ke Log Harian
+                  Tambah ke Log
                 </Button>
               </DialogFooter>
             </>

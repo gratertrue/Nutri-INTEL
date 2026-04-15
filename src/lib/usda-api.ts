@@ -15,15 +15,15 @@ export interface Nutrient {
 export interface FoodItem {
   fdcId: number;
   description: string; // English (Primary)
-  descriptionId: string; // Indonesian (Secondary)
   foodNutrients: Nutrient[];
   brandOwner?: string;
+  dataType?: string;
 }
 
 /**
- * Fungsi Penerjemah menggunakan MyMemory API
+ * Fungsi Penerjemah Universal
  */
-async function translate(text: string, pair: 'id|en' | 'en|id'): Promise<string> {
+export async function translateText(text: string, pair: 'id|en' | 'en|id'): Promise<string> {
   if (!text || /^\d+$/.test(text)) return text;
   
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
@@ -36,58 +36,47 @@ async function translate(text: string, pair: 'id|en' | 'en|id'): Promise<string>
     }
     return text;
   } catch (error) {
-    console.error("Translation Error:", error);
     return text;
   }
 }
 
 /**
- * Deteksi apakah teks kemungkinan besar bahasa Inggris
+ * Deteksi Bahasa Inggris Sederhana
  */
 function isLikelyEnglish(text: string): boolean {
-  // Sederhana: jika mengandung kata-kata umum Inggris atau hanya karakter ASCII standar
-  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat)\b/i;
+  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato)\b/i;
   return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
 }
 
 /**
- * Fungsi Pencarian USDA yang dioptimalkan
+ * Fungsi Pencarian USDA yang sangat cepat
  */
-export async function searchFoods(query: string, pageSize: number = 12): Promise<FoodItem[]> {
+export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
   try {
-    // 1. Optimasi Kecepatan: Deteksi bahasa. Jika sudah Inggris, lewati translasi ke Inggris.
+    // 1. Terjemahkan query ke Inggris HANYA jika diperlukan
     let searchTerms = query;
     if (!isLikelyEnglish(query)) {
-      searchTerms = await translate(query, 'id|en');
+      searchTerms = await translateText(query, 'id|en');
     }
 
-    // 2. Request ke USDA
+    // 2. Request ke USDA dengan prioritas data akurat (Foundation & SR Legacy)
     const response = await fetch(`${BASE_URL}/foods/search?api_key=${USDA_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query: searchTerms,
         pageSize: pageSize,
-        dataType: ["Foundation", "SR Legacy", "Branded"]
+        // Prioritaskan data laboratorium (Foundation/SR Legacy) daripada data brand yang sering tidak akurat
+        dataType: ["Foundation", "SR Legacy", "Branded"],
+        sortBy: "dataType.keyword",
+        sortOrder: "asc"
       })
     });
 
-    if (!response.ok) throw new Error("Gagal menghubungi API USDA");
+    if (!response.ok) throw new Error("USDA API Error");
 
     const data = await response.json();
-    const foods = data.foods || [];
-
-    // 3. Optimasi Kecepatan: Terjemahkan hasil ke Indonesia secara PARALEL
-    const results = await Promise.all(foods.map(async (food: any) => {
-      const translatedDesc = await translate(food.description, 'en|id');
-      return {
-        ...food,
-        description: food.description, // English as Primary
-        descriptionId: translatedDesc // Indonesian as Secondary
-      };
-    }));
-
-    return results;
+    return data.foods || [];
   } catch (error) {
     console.error("Search Error:", error);
     throw error;
