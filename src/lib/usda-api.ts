@@ -1,5 +1,5 @@
 /**
- * USDA & Translation API Utility
+ * USDA & Translation API Utility - Optimized for Speed & Accuracy
  */
 
 const USDA_API_KEY = "W1cTjbexnEV7o7cAqAmXlyytOGFCv2DnblANhXcR";
@@ -14,8 +14,8 @@ export interface Nutrient {
 
 export interface FoodItem {
   fdcId: number;
-  description: string;
-  descriptionEn: string;
+  description: string; // English (Primary)
+  descriptionId: string; // Indonesian (Secondary)
   foodNutrients: Nutrient[];
   brandOwner?: string;
 }
@@ -42,38 +42,48 @@ async function translate(text: string, pair: 'id|en' | 'en|id'): Promise<string>
 }
 
 /**
- * Fungsi Pencarian USDA dengan API Key Hardcoded
+ * Deteksi apakah teks kemungkinan besar bahasa Inggris
+ */
+function isLikelyEnglish(text: string): boolean {
+  // Sederhana: jika mengandung kata-kata umum Inggris atau hanya karakter ASCII standar
+  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat)\b/i;
+  return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
+}
+
+/**
+ * Fungsi Pencarian USDA yang dioptimalkan
  */
 export async function searchFoods(query: string, pageSize: number = 12): Promise<FoodItem[]> {
   try {
-    // 1. Terjemahkan input user (Indo -> Inggris)
-    const translatedQuery = await translate(query, 'id|en');
+    // 1. Optimasi Kecepatan: Deteksi bahasa. Jika sudah Inggris, lewati translasi ke Inggris.
+    let searchTerms = query;
+    if (!isLikelyEnglish(query)) {
+      searchTerms = await translate(query, 'id|en');
+    }
 
-    // 2. Request ke USDA menggunakan POST
+    // 2. Request ke USDA
     const response = await fetch(`${BASE_URL}/foods/search?api_key=${USDA_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        query: translatedQuery,
+        query: searchTerms,
         pageSize: pageSize,
         dataType: ["Foundation", "SR Legacy", "Branded"]
       })
     });
 
-    if (!response.ok) {
-      throw new Error("Gagal menghubungi API USDA");
-    }
+    if (!response.ok) throw new Error("Gagal menghubungi API USDA");
 
     const data = await response.json();
     const foods = data.foods || [];
 
-    // 3. Terjemahkan hasil kembali ke Indonesia (Inggris -> Indo)
+    // 3. Optimasi Kecepatan: Terjemahkan hasil ke Indonesia secara PARALEL
     const results = await Promise.all(foods.map(async (food: any) => {
       const translatedDesc = await translate(food.description, 'en|id');
       return {
         ...food,
-        descriptionEn: food.description,
-        description: translatedDesc
+        description: food.description, // English as Primary
+        descriptionId: translatedDesc // Indonesian as Secondary
       };
     }));
 

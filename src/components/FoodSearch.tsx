@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -34,11 +34,11 @@ const FoodSearch = () => {
     return items.map(item => {
       let score = 0;
       const desc = item.description.toLowerCase();
-      const descEn = item.descriptionEn.toLowerCase();
+      const descId = item.descriptionId.toLowerCase();
       
-      if (desc === q || descEn === q) score += 100;
-      else if (desc.startsWith(q) || descEn.startsWith(q)) score += 50;
-      else if (desc.includes(q) || descEn.includes(q)) score += 10;
+      if (desc === q || descId === q) score += 100;
+      else if (desc.startsWith(q) || descId.startsWith(q)) score += 50;
+      else if (desc.includes(q) || descId.includes(q)) score += 10;
       
       return { item, score };
     })
@@ -74,7 +74,7 @@ const FoodSearch = () => {
 
     setLoading(true);
     try {
-      const data = await searchFoods(searchQuery, 10);
+      const data = await searchFoods(searchQuery, 12);
       const sortedResults = smartSort(data, searchQuery);
       setResults(sortedResults.length > 0 ? sortedResults : data);
       setActiveIndex(-1);
@@ -126,7 +126,7 @@ const FoodSearch = () => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Cari makanan (misal: Nasi Goreng, Apel)..."
+          placeholder="Cari makanan (English or Indonesia)..."
           className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
         />
         {query && (
@@ -167,9 +167,10 @@ const FoodSearch = () => {
                         {highlightText(food.description, query)}
                       </h3>
                     </div>
-                    <p className="text-xs text-slate-500 italic truncate mb-2">
-                      Original: {food.descriptionEn}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 italic truncate mb-2">
+                      <Languages className="h-3 w-3" />
+                      <span>Nama Lokal: {highlightText(food.descriptionId, query)}</span>
+                    </div>
                     <div className="flex gap-2">
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
                         {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
@@ -220,7 +221,10 @@ const FoodSearch = () => {
                   <span className="text-[10px] font-bold uppercase tracking-widest">Detail Nutrisi Lengkap</span>
                 </div>
                 <DialogTitle className="text-2xl font-bold">{selectedFood.description}</DialogTitle>
-                <p className="text-slate-500 text-xs italic">Asli: {selectedFood.descriptionEn}</p>
+                <div className="flex items-center gap-1.5 text-slate-500 text-xs italic">
+                  <Languages className="h-3 w-3" />
+                  <span>Nama Lokal: {selectedFood.descriptionId}</span>
+                </div>
               </DialogHeader>
 
               <div className="flex-1 overflow-hidden py-4">
