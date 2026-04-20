@@ -76,8 +76,8 @@ const NutritionDashboard = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-        <div className="lg:col-span-3 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="space-y-3">
           <Card className="bg-slate-900/50 border-slate-800">
             <CardHeader className="p-2 pb-0">
               <CardTitle className="text-[9px] font-bold text-white uppercase">Distribusi Makro</CardTitle>
@@ -101,22 +101,21 @@ const NutritionDashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          <div className="scale-95 origin-top"><SmartNutritionAnalyzer /></div>
+          <SmartNutritionAnalyzer />
         </div>
 
-        <div className="lg:col-span-2 space-y-3">
-          <div className="scale-95 origin-top"><SmartSuggestions /></div>
+        <div className="space-y-3">
+          <SmartSuggestions />
           <Card className="bg-slate-900/50 border-slate-800">
             <CardHeader className="p-2 pb-0">
-              <CardTitle className="text-[9px] font-bold text-white uppercase">Aktivitas</CardTitle>
+              <CardTitle className="text-[9px] font-bold text-white uppercase">Aktivitas Terakhir</CardTitle>
             </CardHeader>
             <CardContent className="p-2">
               <div className="space-y-1.5">
                 {todayLogs.length === 0 ? (
                   <p className="text-[9px] text-slate-600 text-center py-2 italic">Belum ada data</p>
                 ) : (
-                  todayLogs.slice(-2).reverse().map(log => (
+                  todayLogs.slice(-3).reverse().map(log => (
                     <div key={log.id} className="flex items-center justify-between p-1.5 rounded bg-slate-800/30 border border-slate-800/50">
                       <div className="min-w-0 flex-1 mr-2">
                         <p className="text-[9px] font-bold text-white truncate">{log.food.description}</p>
