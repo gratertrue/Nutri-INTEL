@@ -11,6 +11,7 @@ import NutritionHistory from '@/components/NutritionHistory';
 import WaterTracker from '@/components/WaterTracker';
 import SleepTracker from '@/components/SleepTracker';
 import Goals from '@/components/Goals';
+import OnboardingGuide from '@/components/OnboardingGuide';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -281,6 +282,7 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen bg-[#0F172A] text-slate-200 font-sans selection:bg-cyan-500/30">
+      <OnboardingGuide />
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
