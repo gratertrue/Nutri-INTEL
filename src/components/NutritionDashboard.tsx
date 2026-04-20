@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { getNutrientValue, calculateSmartScore } from '@/lib/usda-api';
-import { Flame, Target, Trophy, Zap, AlertTriangle, History } from 'lucide-react';
+import { Flame, Target, Trophy, History } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import SmartSuggestions from './SmartSuggestions';
 import GrowthImpactInfo from './GrowthImpactInfo';
@@ -11,7 +11,7 @@ import SmartNutritionAnalyzer from './SmartNutritionAnalyzer';
 import { cn } from '@/lib/utils';
 
 const NutritionDashboard = () => {
-  const { logs, profile, points, achievements, getAverageNutrients } = useNutritionStore();
+  const { logs, profile, achievements, getAverageNutrients } = useNutritionStore();
   
   const today = new Date().setHours(0,0,0,0);
   const todayLogs = logs.filter(l => new Date(l.timestamp).setHours(0,0,0,0) === today);
@@ -25,7 +25,6 @@ const NutritionDashboard = () => {
     return acc;
   }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  // Analisis Tren (Rata-rata 3 hari)
   const avg = getAverageNutrients(3);
   const isCarbsLowTrend = avg && avg.carbs < profile.carbsGoal;
   const isProteinLowTrend = avg && avg.protein < profile.proteinGoal;
@@ -37,107 +36,67 @@ const NutritionDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Peringatan Gizi Berdasarkan Tren */}
+    <div className="space-y-4 animate-in fade-in duration-300">
       {(isCarbsLowTrend || isProteinLowTrend) && (
-        <Card className="bg-amber-500/10 border-amber-500/20 backdrop-blur-xl border-l-4 border-l-amber-500">
-          <CardContent className="p-4 flex items-start gap-4">
-            <div className="p-2 bg-amber-500/20 rounded-lg">
-              <History className="h-5 w-5 text-amber-500" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Analisis Tren 3 Hari</h3>
-                <span className="text-[10px] bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-bold">DEFISIENSI TERDETEKSI</span>
-              </div>
-              <div className="text-xs text-slate-300 space-y-1">
-                {isCarbsLowTrend && <p>• Rata-rata Karbohidrat Anda ({Math.round(avg.carbs)}g) konsisten di bawah target harian.</p>}
-                {isProteinLowTrend && <p>• Rata-rata Protein Anda ({Math.round(avg.protein)}g) konsisten di bawah target harian.</p>}
-              </div>
-              <div className="pt-2">
-                <GrowthImpactInfo />
-              </div>
+        <Card className="bg-amber-500/10 border-amber-500/20 border-l-2 border-l-amber-500">
+          <CardContent className="p-3 flex items-start gap-3">
+            <History className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Tren Defisiensi</h3>
+              <p className="text-[10px] text-slate-400 leading-tight">Asupan makro Anda di bawah target selama 3 hari terakhir.</p>
+              <div className="mt-1"><GrowthImpactInfo /></div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Poin Harian</CardTitle>
-            <Zap className="h-4 w-4 text-yellow-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">{points}</div>
-            <p className="text-xs text-slate-500">+12% dari kemarin</p>
-          </CardContent>
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="bg-slate-900/50 border-slate-800 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Kalori</span>
+            <Flame className="h-3 w-3 text-orange-500" />
+          </div>
+          <div className="text-lg font-bold text-white">{Math.round(totals.calories)}</div>
+          <Progress value={(totals.calories / profile.calorieGoal) * 100} className="h-1 mt-1" />
         </Card>
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Kalori</CardTitle>
-            <Flame className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">{Math.round(totals.calories)} / {profile.calorieGoal}</div>
-            <Progress value={(totals.calories / profile.calorieGoal) * 100} className="h-2 mt-2" />
-          </CardContent>
+        <Card className="bg-slate-900/50 border-slate-800 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Protein</span>
+            <Target className="h-3 w-3 text-blue-500" />
+          </div>
+          <div className="text-lg font-bold text-white">{Math.round(totals.protein)}g</div>
+          <Progress value={(totals.protein / profile.proteinGoal) * 100} className="h-1 mt-1" />
         </Card>
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Protein</CardTitle>
-            <Target className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">{Math.round(totals.protein)}g / {profile.proteinGoal}g</div>
-            <Progress value={(totals.protein / profile.proteinGoal) * 100} className="h-2 mt-2" />
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Pencapaian</CardTitle>
-            <Trophy className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-white">{achievements.filter(a => a.unlocked).length} / {achievements.length}</div>
-            <p className="text-xs text-slate-500">Terus semangat!</p>
-          </CardContent>
+        <Card className="bg-slate-900/50 border-slate-800 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Piala</span>
+            <Trophy className="h-3 w-3 text-purple-500" />
+          </div>
+          <div className="text-lg font-bold text-white">{achievements.filter(a => a.unlocked).length}</div>
+          <p className="text-[8px] text-slate-500">Pencapaian</p>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="text-white">Distribusi Makro Hari Ini</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="lg:col-span-3 space-y-4">
+          <Card className="bg-slate-900/50 border-slate-800">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-bold text-white uppercase">Distribusi Makro</CardTitle>
             </CardHeader>
-            <CardContent className="h-[300px]">
+            <CardContent className="h-[180px] p-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={macroData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {macroData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                  <Pie data={macroData} cx="50%" cy="50%" innerRadius={45} outerRadius={60} paddingAngle={4} dataKey="value">
+                    {macroData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', fontSize: '10px' }} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex justify-center gap-4 mt-4">
+              <div className="flex justify-center gap-3 pb-3">
                 {macroData.map(m => (
-                  <div key={m.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />
-                    <span className="text-xs text-slate-400">{m.name}: {Math.round(m.value)}g</span>
+                  <div key={m.name} className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
+                    <span className="text-[9px] text-slate-400">{m.name}</span>
                   </div>
                 ))}
               </div>
@@ -145,27 +104,27 @@ const NutritionDashboard = () => {
           </Card>
 
           <SmartNutritionAnalyzer />
+        </div>
 
-          <Card className="bg-slate-900/50 border-slate-800 backdrop-blur-xl">
-            <CardHeader>
-              <CardTitle className="text-white">Aktivitas Terbaru</CardTitle>
+        <div className="lg:col-span-2 space-y-4">
+          <SmartSuggestions />
+          <Card className="bg-slate-900/50 border-slate-800">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-bold text-white uppercase">Aktivitas</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-3">
+              <div className="space-y-2">
                 {todayLogs.length === 0 ? (
-                  <p className="text-slate-500 text-center py-8">Belum ada makanan yang dicatat hari ini.</p>
+                  <p className="text-[10px] text-slate-600 text-center py-4 italic">Belum ada data</p>
                 ) : (
-                  todayLogs.slice(-5).reverse().map(log => (
-                    <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30">
-                      <div>
-                        <p className="text-sm font-medium text-white">{log.food.description}</p>
-                        <p className="text-xs text-slate-500">{log.amount}g • {Math.round(getNutrientValue(log.food.foodNutrients, "Energy") * (log.amount/100))} kkal</p>
+                  todayLogs.slice(-3).reverse().map(log => (
+                    <div key={log.id} className="flex items-center justify-between p-2 rounded bg-slate-800/30 border border-slate-800/50">
+                      <div className="min-w-0 flex-1 mr-2">
+                        <p className="text-[10px] font-bold text-white truncate">{log.food.description}</p>
+                        <p className="text-[9px] text-slate-500">{log.amount}g • {Math.round(getNutrientValue(log.food.foodNutrients, "Energy") * (log.amount/100))} kkal</p>
                       </div>
-                      <div className={cn(
-                        "text-xs font-bold px-2 py-1 rounded",
-                        calculateSmartScore(log.food.foodNutrients) > 70 ? 'text-green-400 bg-green-500/10' : 'text-cyan-400 bg-cyan-500/10'
-                      )}>
-                        Skor: {calculateSmartScore(log.food.foodNutrients)}
+                      <div className="text-[9px] font-black text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded">
+                        {calculateSmartScore(log.food.foodNutrients)}
                       </div>
                     </div>
                   ))
@@ -173,10 +132,6 @@ const NutritionDashboard = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <SmartSuggestions />
         </div>
       </div>
     </div>
