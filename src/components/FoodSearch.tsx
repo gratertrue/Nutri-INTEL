@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap, WifiOff } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -22,7 +22,6 @@ const FoodSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [translatedName, setTranslatedName] = useState('');
   const [translating, setTranslating] = useState(false);
@@ -34,7 +33,6 @@ const FoodSearch = () => {
   const performSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
-      setError(null);
       return;
     }
 
@@ -42,15 +40,11 @@ const FoodSearch = () => {
     abortControllerRef.current = new AbortController();
 
     setLoading(true);
-    setError(null);
     try {
       const data = await searchFoods(searchQuery, 15);
       setResults(data);
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        setError(err.message);
-        showError(err.message || "Gagal mencari makanan");
-      }
+      if (err.name !== 'AbortError') showError("Gagal mencari makanan");
     } finally {
       setLoading(false);
     }
@@ -59,7 +53,7 @@ const FoodSearch = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query) performSearch(query);
-    }, 500);
+    }, 400); // Debounce lebih lama untuk akurasi pengetikan
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
@@ -68,6 +62,7 @@ const FoodSearch = () => {
     setTranslatedName('');
     setTranslating(true);
     
+    // Terjemahkan nama HANYA saat dipilih (On-Demand)
     try {
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
@@ -98,26 +93,13 @@ const FoodSearch = () => {
         />
         {query && (
           <button 
-            onClick={() => { setQuery(''); setResults([]); setError(null); }}
+            onClick={() => { setQuery(''); setResults([]); }}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         )}
       </div>
-
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400">
-          <WifiOff className="h-5 w-5 shrink-0" />
-          <div className="text-xs">
-            <p className="font-bold">Masalah Koneksi API</p>
-            <p className="opacity-80">{error}</p>
-          </div>
-          <Button size="sm" variant="ghost" onClick={() => performSearch(query)} className="ml-auto text-[10px] h-7 hover:bg-red-500/20">
-            Coba Lagi
-          </Button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-3">
         {results.map((food) => {
@@ -145,6 +127,9 @@ const FoodSearch = () => {
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
                         {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
                       </Badge>
+                      {food.dataType === 'Foundation' && (
+                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] border-cyan-500/30">VERIFIED</Badge>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
@@ -154,7 +139,7 @@ const FoodSearch = () => {
           );
         })}
 
-        {!loading && query && results.length === 0 && !error && (
+        {!loading && query && results.length === 0 && (
           <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
             <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
             <p className="text-slate-400 font-bold text-lg">Makanan tidak ditemukan</p>

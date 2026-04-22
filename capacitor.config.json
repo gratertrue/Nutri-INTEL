@@ -4,14 +4,6 @@
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
-    "androidScheme": "https",
-    "cleartext": true,
-    "allowNavigation": [
-      "api.nal.usda.gov",
-      "api.mymemory.translated.net"
-    ]
-  },
-  "android": {
-    "allowMixedContent": true
+    "androidScheme": "https"
   }
 }
