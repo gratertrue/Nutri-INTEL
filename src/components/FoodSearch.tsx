@@ -48,7 +48,7 @@ const FoodSearch = () => {
       setHasSearched(true);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        showError("Search failed. Please check your connection.");
+        showError("Gagal mencari makanan. Periksa koneksi internet Anda.");
       }
     } finally {
       setLoading(false);
@@ -57,31 +57,27 @@ const FoodSearch = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.length >= 3 && !showScanner) performSearch(query);
+      if (query.length >= 3) performSearch(query);
     }, 800);
     return () => clearTimeout(timer);
-  }, [query, performSearch, showScanner]);
+  }, [query, performSearch]);
 
   const handleBarcodeScan = async (barcode: string) => {
-    // Tutup scanner dulu dan beri jeda singkat agar kamera benar-benar mati
     setShowScanner(false);
-    
-    setTimeout(async () => {
-      setLoading(true);
-      try {
-        const product = await getProductByBarcode(barcode);
-        if (product) {
-          handleSelectFood(product);
-          showSuccess("Product found!");
-        } else {
-          showError("Product not found in database.");
-        }
-      } catch (err) {
-        showError("Error processing barcode.");
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      const product = await getProductByBarcode(barcode);
+      if (product) {
+        handleSelectFood(product);
+        showSuccess("Produk ditemukan!");
+      } else {
+        showError("Produk tidak ditemukan.");
       }
-    }, 300);
+    } catch (err) {
+      showError("Gagal memproses barcode");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSelectFood = async (food: FoodItem) => {
@@ -89,10 +85,11 @@ const FoodSearch = () => {
     setTranslatedName(food.description);
     setTranslating(true);
     try {
+      // Terjemahan hanya dilakukan setelah item diklik
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
     } catch (e) {
-      // Fallback
+      // Tetap gunakan nama asli jika gagal
     } finally {
       setTranslating(false);
     }
@@ -100,7 +97,7 @@ const FoodSearch = () => {
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Added to log!`);
+    showSuccess(`Ditambahkan ke log!`);
     setSelectedFood(null);
   };
 
@@ -123,7 +120,7 @@ const FoodSearch = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && performSearch(query)}
-              placeholder="Search in English (e.g. Chicken, Rice)..."
+              placeholder="Search in English (e.g. Chicken, Rice, Egg)..."
               className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
             />
             {query && (
