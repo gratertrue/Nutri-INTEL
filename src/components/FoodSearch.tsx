@@ -3,9 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
-import { getProductByBarcode } from '@/lib/openfoodfacts-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap, ScanBarcode } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import HealthAnalyzer from './HealthAnalyzer';
-import BarcodeScanner from './BarcodeScanner';
 import { cn } from '@/lib/utils';
 
 const FoodSearch = () => {
@@ -28,7 +26,6 @@ const FoodSearch = () => {
   const [translatedName, setTranslatedName] = useState('');
   const [translating, setTranslating] = useState(false);
   const [amount, setAmount] = useState(100);
-  const [showScanner, setShowScanner] = useState(false);
   
   const { addLog } = useNutritionStore();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -56,33 +53,16 @@ const FoodSearch = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query) performSearch(query);
-    }, 400);
+    }, 400); // Debounce lebih lama untuk akurasi pengetikan
     return () => clearTimeout(timer);
   }, [query, performSearch]);
-
-  const handleBarcodeScan = async (barcode: string) => {
-    setShowScanner(false);
-    setLoading(true);
-    try {
-      const product = await getProductByBarcode(barcode);
-      if (product) {
-        handleSelectFood(product);
-        showSuccess("Produk ditemukan!");
-      } else {
-        showError("Produk tidak ditemukan di database Open Food Facts");
-      }
-    } catch (err) {
-      showError("Gagal memproses barcode");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSelectFood = async (food: FoodItem) => {
     setSelectedFood(food);
     setTranslatedName('');
     setTranslating(true);
     
+    // Terjemahkan nama HANYA saat dipilih (On-Demand)
     try {
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
@@ -101,39 +81,24 @@ const FoodSearch = () => {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      {showScanner && (
-        <BarcodeScanner 
-          onScan={handleBarcodeScan} 
-          onClose={() => setShowScanner(false)} 
-        />
-      )}
-
-      <div className="flex gap-2">
-        <div className="relative group flex-1">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
-            {loading ? <Loader2 className="animate-spin" /> : <Search />}
-          </div>
-          <Input 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari makanan..."
-            className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
-          />
-          {query && (
-            <button 
-              onClick={() => { setQuery(''); setResults([]); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
+      <div className="relative group">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
+          {loading ? <Loader2 className="animate-spin" /> : <Search />}
         </div>
-        <Button 
-          onClick={() => setShowScanner(true)}
-          className="h-14 w-14 rounded-2xl bg-cyan-600 hover:bg-cyan-700 shadow-2xl shrink-0"
-        >
-          <ScanBarcode className="h-6 w-6" />
-        </Button>
+        <Input 
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Cari makanan (English/Indonesia)..."
+          className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
+        />
+        {query && (
+          <button 
+            onClick={() => { setQuery(''); setResults([]); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -162,6 +127,9 @@ const FoodSearch = () => {
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
                         {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
                       </Badge>
+                      {food.dataType === 'Foundation' && (
+                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] border-cyan-500/30">VERIFIED</Badge>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
@@ -170,6 +138,13 @@ const FoodSearch = () => {
             </Card>
           );
         })}
+
+        {!loading && query && results.length === 0 && (
+          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
+            <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
+            <p className="text-slate-400 font-bold text-lg">Makanan tidak ditemukan</p>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
