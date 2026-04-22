@@ -1,8 +1,11 @@
 /**
- * USDA & Translation API Utility - Optimized for Speed & Accuracy
+ * USDA & Translation API Utility
+ * PENTING: Kunci API publik sering dinonaktifkan. 
+ * Dapatkan kunci gratis Anda di: https://api.data.gov/signup/
  */
 
-const USDA_API_KEY = "W1cTjbexnEV7o7cAqAmXlyytOGFCv2DnblANhXcR";
+// Ganti string di bawah ini dengan kunci API Anda yang baru
+const USDA_API_KEY = "DEMO_KEY"; 
 const BASE_URL = "https://api.nal.usda.gov/fdc/v1";
 
 export interface Nutrient {
@@ -14,52 +17,36 @@ export interface Nutrient {
 
 export interface FoodItem {
   fdcId: number;
-  description: string; // English (Primary)
+  description: string;
   foodNutrients: Nutrient[];
   brandOwner?: string;
   dataType?: string;
 }
 
-/**
- * Fungsi Penerjemah Universal
- */
 export async function translateText(text: string, pair: 'id|en' | 'en|id'): Promise<string> {
   if (!text || /^\d+$/.test(text)) return text;
-  
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
-  
   try {
     const response = await fetch(url);
     const data = await response.json();
-    if (data.responseStatus === 200) {
-      return data.responseData.translatedText;
-    }
-    return text;
+    return data.responseStatus === 200 ? data.responseData.translatedText : text;
   } catch (error) {
     return text;
   }
 }
 
-/**
- * Deteksi Bahasa Inggris Sederhana
- */
 function isLikelyEnglish(text: string): boolean {
   const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato)\b/i;
   return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
 }
 
-/**
- * Fungsi Pencarian USDA yang diperbaiki (Menggunakan GET untuk menghindari CORS)
- */
 export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
   try {
-    // 1. Terjemahkan query ke Inggris HANYA jika diperlukan
     let searchTerms = query;
     if (!isLikelyEnglish(query)) {
       searchTerms = await translateText(query, 'id|en');
     }
 
-    // 2. Gunakan GET request untuk menghindari preflight OPTIONS (CORS)
     const params = new URLSearchParams({
       api_key: USDA_API_KEY,
       query: searchTerms,
@@ -71,7 +58,10 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `USDA API Error: ${response.status}`);
+      if (response.status === 403) {
+        throw new Error("Kunci API USDA dinonaktifkan atau salah. Silakan ganti dengan kunci baru di usda-api.ts");
+      }
+      throw new Error(errorData.error?.message || `API Error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -91,7 +81,6 @@ export function calculateSmartScore(nutrients: Nutrient[]): number {
   const protein = getNutrientValue(nutrients, "Protein");
   const fiber = getNutrientValue(nutrients, "Fiber");
   const sugar = getNutrientValue(nutrients, "Sugars");
-  
   let score = 50;
   score += (protein * 2) + (fiber * 3);
   score -= (sugar * 2);
