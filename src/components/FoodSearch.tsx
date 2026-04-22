@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
+import { searchOFFFoods } from '@/lib/off-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap, Database } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -15,6 +16,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import HealthAnalyzer from './HealthAnalyzer';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +28,7 @@ const FoodSearch = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<'usda' | 'off'>('usda');
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [translatedName, setTranslatedName] = useState('');
   const [translating, setTranslating] = useState(false);
@@ -30,21 +37,23 @@ const FoodSearch = () => {
   const { addLog } = useNutritionStore();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const performSearch = useCallback(async (searchQuery: string) => {
+  const performSearch = useCallback(async (searchQuery: string, currentSource: 'usda' | 'off') => {
     if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
 
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = new AbortController();
-
     setLoading(true);
     try {
-      const data = await searchFoods(searchQuery, 15);
+      let data: FoodItem[] = [];
+      if (currentSource === 'usda') {
+        data = await searchFoods(searchQuery, 15);
+      } else {
+        data = await searchOFFFoods(searchQuery);
+      }
       setResults(data);
     } catch (err: any) {
-      if (err.name !== 'AbortError') showError("Gagal mencari makanan");
+      showError(err.message || "Gagal mencari makanan");
     } finally {
       setLoading(false);
     }
@@ -52,20 +61,24 @@ const FoodSearch = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query) performSearch(query);
-    }, 400); // Debounce lebih lama untuk akurasi pengetikan
+      if (query) performSearch(query, source);
+    }, 500);
     return () => clearTimeout(timer);
-  }, [query, performSearch]);
+  }, [query, source, performSearch]);
 
   const handleSelectFood = async (food: FoodItem) => {
     setSelectedFood(food);
     setTranslatedName('');
     setTranslating(true);
     
-    // Terjemahkan nama HANYA saat dipilih (On-Demand)
     try {
-      const idName = await translateText(food.description, 'en|id');
-      setTranslatedName(idName);
+      // Hanya terjemahkan jika dari USDA (biasanya English)
+      if (food.dataType !== 'Branded (OFF)') {
+        const idName = await translateText(food.description, 'en|id');
+        setTranslatedName(idName);
+      } else {
+        setTranslatedName(food.description);
+      }
     } catch (e) {
       setTranslatedName(food.description);
     } finally {
@@ -80,25 +93,40 @@ const FoodSearch = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      <div className="relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
-          {loading ? <Loader2 className="animate-spin" /> : <Search />}
+    <div className="space-y-4 max-w-4xl mx-auto animate-in fade-in duration-500">
+      <div className="space-y-3">
+        <div className="relative group">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
+            {loading ? <Loader2 className="animate-spin" /> : <Search />}
+          </div>
+          <Input 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={source === 'usda' ? "Cari bahan mentah (USDA)..." : "Cari produk kemasan/barcode (OFF)..."}
+            className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
+          />
+          {query && (
+            <button 
+              onClick={() => { setQuery(''); setResults([]); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
-        <Input 
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari makanan (English/Indonesia)..."
-          className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
-        />
-        {query && (
-          <button 
-            onClick={() => { setQuery(''); setResults([]); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
+
+        <Tabs value={source} onValueChange={(val: any) => setSource(val)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-slate-900 border border-slate-800 h-12 p-1 rounded-xl">
+            <TabsTrigger value="usda" className="rounded-lg data-[state=active]:bg-cyan-600 data-[state=active]:text-white text-xs font-bold uppercase tracking-wider">
+              <Database className="h-3.5 w-3.5 mr-2" />
+              USDA (Bahan Mentah)
+            </TabsTrigger>
+            <TabsTrigger value="off" className="rounded-lg data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs font-bold uppercase tracking-wider">
+              <Globe className="h-3.5 w-3.5 mr-2" />
+              OFF (Produk Kemasan)
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -120,16 +148,19 @@ const FoodSearch = () => {
                     <h3 className="text-white font-bold truncate text-lg group-hover:text-cyan-400 transition-colors">
                       {food.description}
                     </h3>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-2">
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
                         {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
                       </Badge>
                       <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
                         {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
                       </Badge>
-                      {food.dataType === 'Foundation' && (
-                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] border-cyan-500/30">VERIFIED</Badge>
-                      )}
+                      <Badge className={cn(
+                        "text-[8px] border-none",
+                        food.dataType === 'Branded (OFF)' ? "bg-purple-500/20 text-purple-400" : "bg-cyan-500/20 text-cyan-400"
+                      )}>
+                        {food.dataType || 'USDA'}
+                      </Badge>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
@@ -143,6 +174,7 @@ const FoodSearch = () => {
           <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
             <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
             <p className="text-slate-400 font-bold text-lg">Makanan tidak ditemukan</p>
+            <p className="text-xs text-slate-600 mt-1">Coba ganti sumber data ke {source === 'usda' ? 'OFF' : 'USDA'}</p>
           </div>
         )}
       </div>
