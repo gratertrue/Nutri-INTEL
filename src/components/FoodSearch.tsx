@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/scroll-area";
 import HealthAnalyzer from './HealthAnalyzer';
 import { cn } from '@/lib/utils';
 
@@ -54,7 +54,6 @@ const FoodSearch = () => {
     }
   }, []);
 
-  // Pencarian otomatis saat mengetik (Debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.length >= 2) performSearch(query);
@@ -66,7 +65,6 @@ const FoodSearch = () => {
     if (e.key === 'Enter') {
       e.preventDefault();
       performSearch(query);
-      // Tutup keyboard di mobile dengan menghilangkan fokus
       (e.target as HTMLInputElement).blur();
     }
   };
@@ -103,7 +101,7 @@ const FoodSearch = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Cari makanan..."
+            placeholder="Cari (Gunakan Bahasa Inggris, misal: Rice)..."
             enterKeyHint="search"
             autoComplete="off"
             className="pl-11 pr-10 bg-slate-900/80 border-slate-800 text-white h-12 text-sm rounded-xl focus:ring-2 focus:ring-cyan-500/50 transition-all"
@@ -164,7 +162,7 @@ const FoodSearch = () => {
         {!loading && query.trim().length >= 2 && results.length === 0 && (
           <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
             <p className="text-slate-500 font-bold text-sm">Tidak ada hasil untuk "{query}"</p>
-            <p className="text-[10px] text-slate-600 mt-1">Coba gunakan kata kunci bahasa Inggris jika pencarian gagal.</p>
+            <p className="text-[10px] text-slate-600 mt-1">Gunakan kata kunci Bahasa Inggris (misal: Chicken, Egg, Rice).</p>
           </div>
         )}
       </div>
@@ -181,7 +179,7 @@ const FoodSearch = () => {
                 <DialogTitle className="text-lg font-bold leading-tight">{selectedFood.description}</DialogTitle>
                 <div className="flex items-center gap-1 text-slate-500 text-[10px] italic">
                   <Languages className="h-2.5 w-2.5" />
-                  <span>{translating ? "Menerjemahkan..." : `Nama Lokal: ${translatedName}`}</span>
+                  <span>{translating ? "Menerjemahkan..." : `Nama Indonesia: ${translatedName}`}</span>
                 </div>
               </DialogHeader>
 

@@ -28,7 +28,7 @@ export async function translateText(text: string, pair: 'id|en' | 'en|id'): Prom
     debugStore.addLog('info', `Menerjemahkan: "${text}" (${pair})`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // Naikkan ke 5 detik untuk mobile
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
     const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
@@ -39,18 +39,11 @@ export async function translateText(text: string, pair: 'id|en' | 'en|id'): Prom
       debugStore.addLog('info', `Hasil Terjemahan: "${translated}"`);
       return translated;
     }
-    
-    debugStore.addLog('warn', `Penerjemah merespon status: ${data.responseStatus}`);
     return text;
   } catch (error: any) {
     debugStore.addLog('warn', `Gagal menerjemahkan: ${error.message}`);
     return text;
   }
-}
-
-function isLikelyEnglish(text: string): boolean {
-  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato|juice|coffee|tea)\b/i;
-  return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
 }
 
 export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
@@ -62,17 +55,9 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
   }
 
   try {
-    let searchTerms = query.trim();
-    debugStore.addLog('info', `Memulai pencarian USDA untuk: "${searchTerms}"`);
+    const searchTerms = query.trim();
+    debugStore.addLog('info', `Mencari di USDA (English): "${searchTerms}"`);
     
-    // Coba terjemahkan jika bukan bahasa Inggris
-    if (!isLikelyEnglish(searchTerms)) {
-      const translated = await translateText(searchTerms, 'id|en');
-      if (translated && translated.toLowerCase() !== searchTerms.toLowerCase()) {
-        searchTerms = translated;
-      }
-    }
-
     const params = new URLSearchParams({
       api_key: apiKey,
       query: searchTerms,
@@ -91,21 +76,6 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
     const results = data.foods || [];
     
     debugStore.addLog('info', `Ditemukan ${results.length} hasil untuk "${searchTerms}"`);
-
-    // Fallback: Jika hasil 0 dan tadi pakai terjemahan, coba cari kata aslinya saja
-    if (results.length === 0 && searchTerms !== query.trim()) {
-      debugStore.addLog('info', `Mencoba fallback dengan kata asli: "${query.trim()}"`);
-      const retryParams = new URLSearchParams({
-        api_key: apiKey,
-        query: query.trim(),
-        pageSize: pageSize.toString(),
-        dataType: "Foundation,SR Legacy,Branded"
-      });
-      const retryRes = await fetch(`${BASE_URL}/foods/search?${retryParams.toString()}`);
-      const retryData = await retryRes.json();
-      return retryData.foods || [];
-    }
-
     return results;
   } catch (error: any) {
     debugStore.addLog('error', `Search Exception: ${error.message}`);
