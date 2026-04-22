@@ -1,6 +1,6 @@
 /**
  * USDA & Translation API Utility
- * Dioptimalkan untuk keandalan koneksi di perangkat Android.
+ * Dioptimalkan untuk koneksi mobile dan fallback pencarian.
  */
 
 const USDA_API_KEY = import.meta.env.VITE_USDA_API_KEY || "DEMO_KEY"; 
@@ -9,16 +9,14 @@ const BASE_URL = "https://api.nal.usda.gov/fdc/v1";
 export async function translateText(text: string, pair: 'id|en' | 'en|id'): Promise<string> {
   if (!text || /^\d+$/.test(text)) return text;
   
+  // Menggunakan MyMemory API dengan timeout
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
   
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // Timeout 3 detik
     
-    const response = await fetch(url, { 
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' }
-    });
+    const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
     
     const data = await response.json();
@@ -29,8 +27,15 @@ export async function translateText(text: string, pair: 'id|en' | 'en|id'): Prom
   }
 }
 
+function isLikelyEnglish(text: string): boolean {
+  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato)\b/i;
+  return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
+}
+
 export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
-  if (!query.trim()) return [];
+  if (!USDA_API_KEY || USDA_API_KEY === 'DEMO_KEY') {
+    console.error("USDA API Key is missing!");
+  }
 
   const fetchFromUSDA = async (searchTerm: string) => {
     const params = new URLSearchParams({
@@ -40,42 +45,28 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
       dataType: "Foundation,SR Legacy,Branded"
     });
 
-    const response = await fetch(`${BASE_URL}/foods/search?${params.toString()}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) throw new Error("Limit API tercapai (Rate Limit)");
-      throw new Error(`Server Error: ${response.status}`);
-    }
-
+    const response = await fetch(`${BASE_URL}/foods/search?${params.toString()}`);
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
     const data = await response.json();
     return data.foods || [];
   };
 
   try {
-    // Strategi: Coba cari dengan kata asli dulu, lalu coba dengan terjemahan
-    // Ini memastikan jika terjemahan gagal, pencarian tetap berjalan
-    const translated = await translateText(query, 'id|en');
-    
-    // Jalankan pencarian untuk kata asli dan terjemahan (jika berbeda)
-    const searchTasks = [fetchFromUSDA(query)];
-    if (translated.toLowerCase() !== query.toLowerCase()) {
-      searchTasks.push(fetchFromUSDA(translated));
+    // Strategi 1: Coba dengan terjemahan jika bukan bahasa Inggris
+    let searchTerms = query;
+    if (!isLikelyEnglish(query)) {
+      searchTerms = await translateText(query, 'id|en');
     }
 
-    const resultsArray = await Promise.all(searchTasks);
-    
-    // Gabungkan hasil dan hapus duplikat berdasarkan fdcId
-    const combinedResults = resultsArray.flat();
-    const uniqueResults = Array.from(new Map(combinedResults.map(item => [item.fdcId, item])).values());
+    let results = await fetchFromUSDA(searchTerms);
 
-    return uniqueResults;
-  } catch (error: any) {
+    // Strategi 2: Fallback - Jika hasil kosong dan tadi pakai terjemahan, coba teks asli
+    if (results.length === 0 && searchTerms !== query) {
+      results = await fetchFromUSDA(query);
+    }
+
+    return results;
+  } catch (error) {
     console.error("Search Error:", error);
     throw error;
   }
@@ -89,8 +80,11 @@ export function getNutrientValue(nutrients: Nutrient[], name: string): number {
 
 export function calculateSmartScore(nutrients: Nutrient[]): number {
   const protein = getNutrientValue(nutrients, "Protein");
+  const fiber = getNutrientValue(nutrients, "Fiber");
   const sugar = getNutrientValue(nutrients, "Sugars");
-  let score = 50 + (protein * 2) - (sugar * 2);
+  let score = 50;
+  score += (protein * 2) + (fiber * 3);
+  score -= (sugar * 2);
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 

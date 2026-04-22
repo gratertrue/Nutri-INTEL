@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
 import { getProductByBarcode } from '@/lib/openfoodfacts-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, AlertCircle, X, ListFilter, Plus, Languages, Zap, ScanBarcode } from 'lucide-react';
+import { Search, Loader2, ChevronRight, Globe, AlertCircle, X, ListFilter, Plus, Languages, Zap, ScanBarcode } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -35,20 +35,23 @@ const FoodSearch = () => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const performSearch = useCallback(async (searchQuery: string) => {
-    const trimmed = searchQuery.trim();
-    if (!trimmed) return;
+    if (!searchQuery.trim()) {
+      setResults([]);
+      setHasSearched(false);
+      return;
+    }
 
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
     setLoading(true);
     try {
-      const data = await searchFoods(trimmed, 20);
+      const data = await searchFoods(searchQuery, 15);
       setResults(data);
       setHasSearched(true);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        showError(err.message || "Gagal menghubungi server makanan.");
+        showError("Koneksi bermasalah atau Kunci API belum diatur.");
       }
     } finally {
       setLoading(false);
@@ -57,8 +60,8 @@ const FoodSearch = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.length >= 3) performSearch(query);
-    }, 1000);
+      if (query) performSearch(query);
+    }, 600); // Debounce sedikit lebih lama untuk mobile
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
@@ -71,7 +74,7 @@ const FoodSearch = () => {
         handleSelectFood(product);
         showSuccess("Produk ditemukan!");
       } else {
-        showError("Produk tidak ditemukan.");
+        showError("Produk tidak ditemukan di database.");
       }
     } catch (err) {
       showError("Gagal memproses barcode");
@@ -82,13 +85,14 @@ const FoodSearch = () => {
 
   const handleSelectFood = async (food: FoodItem) => {
     setSelectedFood(food);
-    setTranslatedName(food.description);
+    setTranslatedName('');
     setTranslating(true);
+    
     try {
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
     } catch (e) {
-      // Gunakan nama asli
+      setTranslatedName(food.description);
     } finally {
       setTranslating(false);
     }
@@ -96,7 +100,7 @@ const FoodSearch = () => {
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Ditambahkan ke log!`);
+    showSuccess(`Ditambahkan ke log harian!`);
     setSelectedFood(null);
   };
 
@@ -109,48 +113,31 @@ const FoodSearch = () => {
         />
       )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-2">
-          <div className="relative group flex-1">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
-              {loading ? <Loader2 className="animate-spin" /> : <Search />}
-            </div>
-            <Input 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && performSearch(query)}
-              placeholder="Cari makanan (Ayam, Nasi, dll)..."
-              className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
-            />
-            {query && (
-              <button 
-                onClick={() => { setQuery(''); setResults([]); setHasSearched(false); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
+      <div className="flex gap-2">
+        <div className="relative group flex-1">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
+            {loading ? <Loader2 className="animate-spin" /> : <Search />}
           </div>
-          <Button 
-            onClick={() => performSearch(query)}
-            className="h-14 px-6 rounded-2xl bg-cyan-600 hover:bg-cyan-700 shadow-2xl font-bold hidden sm:flex"
-          >
-            Cari
-          </Button>
-          <Button 
-            onClick={() => setShowScanner(true)}
-            className="h-14 w-14 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 shadow-2xl shrink-0"
-          >
-            <ScanBarcode className="h-6 w-6 text-cyan-400" />
-          </Button>
+          <Input 
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari makanan (Ayam, Nasi, dll)..."
+            className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
+          />
+          {query && (
+            <button 
+              onClick={() => { setQuery(''); setResults([]); setHasSearched(false); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
-        
         <Button 
-          onClick={() => performSearch(query)}
-          disabled={loading || query.length < 2}
-          className="w-full h-12 rounded-xl bg-cyan-600 hover:bg-cyan-700 font-bold sm:hidden"
+          onClick={() => setShowScanner(true)}
+          className="h-14 w-14 rounded-2xl bg-cyan-600 hover:bg-cyan-700 shadow-2xl shrink-0"
         >
-          {loading ? "Mencari..." : "Cari Makanan"}
+          <ScanBarcode className="h-6 w-6" />
         </Button>
       </div>
 
@@ -193,9 +180,9 @@ const FoodSearch = () => {
           <div className="text-center py-12 space-y-4">
             <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 inline-block">
               <AlertCircle className="h-12 w-12 text-slate-700 mx-auto mb-4" />
-              <h3 className="text-white font-bold text-xl">Tidak Ditemukan</h3>
+              <h3 className="text-white font-bold text-xl">Makanan Tidak Ditemukan</h3>
               <p className="text-slate-500 max-w-xs mx-auto mt-2">
-                Coba gunakan kata kunci dalam Bahasa Inggris (misal: "Chicken" untuk Ayam) jika pencarian lokal gagal.
+                Coba gunakan kata kunci yang lebih umum atau dalam Bahasa Inggris (misal: "Chicken" untuk Ayam).
               </p>
             </div>
           </div>
