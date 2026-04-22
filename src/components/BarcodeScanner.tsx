@@ -16,8 +16,7 @@ const BarcodeScanner = ({ onScan, onClose }: BarcodeScannerProps) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Inisialisasi scanner
-    const scanner = new Html5QrcodeScanner(
+    scannerRef.current = new Html5QrcodeScanner(
       "reader",
       { 
         fps: 10, 
@@ -27,25 +26,21 @@ const BarcodeScanner = ({ onScan, onClose }: BarcodeScannerProps) => {
       /* verbose= */ false
     );
 
-    scanner.render(
+    scannerRef.current.render(
       (decodedText) => {
-        scanner.clear().then(() => {
-          onScan(decodedText);
-        }).catch(err => {
-          console.error("Failed to clear scanner", err);
-          onScan(decodedText);
-        });
+        if (scannerRef.current) {
+          scannerRef.current.clear();
+        }
+        onScan(decodedText);
       },
       (errorMessage) => {
         // Abaikan error scanning rutin
       }
     );
 
-    scannerRef.current = scanner;
-
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Cleanup error", err));
+        scannerRef.current.clear().catch(console.error);
       }
     };
   }, [onScan]);
