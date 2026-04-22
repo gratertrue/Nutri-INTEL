@@ -47,11 +47,11 @@ export async function translateText(text: string, pair: 'id|en' | 'en|id'): Prom
 }
 
 export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
-  const apiKey = import.meta.env.VITE_USDA_API_KEY;
+  // Gunakan DEMO_KEY jika VITE_USDA_API_KEY tidak ditemukan
+  const apiKey = import.meta.env.VITE_USDA_API_KEY || "DEMO_KEY";
 
-  if (!apiKey) {
-    debugStore.addLog('error', "API KEY USDA Kosong!");
-    throw new Error("Kunci API tidak ditemukan.");
+  if (apiKey === "DEMO_KEY") {
+    debugStore.addLog('warn', "Menggunakan DEMO_KEY (Limit terbatas). Mohon atur VITE_USDA_API_KEY untuk penggunaan penuh.");
   }
 
   try {
@@ -68,6 +68,10 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
     const response = await fetch(`${BASE_URL}/foods/search?${params.toString()}`);
 
     if (!response.ok) {
+      if (response.status === 429) {
+        debugStore.addLog('error', "Limit API tercapai (Rate Limit).");
+        throw new Error("Terlalu banyak pencarian. Coba lagi nanti atau gunakan API Key pribadi.");
+      }
       debugStore.addLog('error', `USDA API Error: ${response.status}`);
       throw new Error(`Kesalahan API: ${response.status}`);
     }
