@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FoodItem, calculateSmartScore, getNutrientValue } from '@/lib/usda-api';
+import { FoodItem, getNutrientValue } from '@/lib/usda-api';
 import confetti from 'canvas-confetti';
 
 export interface UserProfile {
@@ -50,6 +50,12 @@ export interface WearableData {
   isSleeping: boolean;
   sleepStartTime: number | null;
   sleepHistory: SleepSession[];
+}
+
+export interface MealPlan {
+  id: string;
+  name: string;
+  days: { [key: string]: Recipe[] };
 }
 
 const INITIAL_PROFILE: UserProfile = {
@@ -227,7 +233,6 @@ export function useNutritionStore() {
   };
 
   const calculateRecommendedCalories = () => {
-    // Harris-Benedict Revised Formula
     let bmr = 0;
     if (profile.gender === 'male') {
       bmr = 88.362 + (13.397 * profile.weight) + (4.799 * profile.height) - (5.677 * profile.age);
@@ -236,10 +241,10 @@ export function useNutritionStore() {
     }
 
     const activityFactors = {
-      sedentary: 1.2, // Ringan
-      light: 1.4,     // Cukup Aktif
-      moderate: 1.6,  // Aktif
-      active: 1.8,    // Sangat Aktif
+      sedentary: 1.2,
+      light: 1.4,
+      moderate: 1.6,
+      active: 1.8,
       very_active: 2.0
     };
 
@@ -254,8 +259,6 @@ export function useNutritionStore() {
   const getAKGGoals = () => {
     const isMale = profile.gender === 'male';
     const age = profile.age;
-
-    // Simplified AKG Indonesia (Permenkes 28/2019)
     return {
       vitaminC: isMale ? 90 : 75,
       iron: isMale ? (age < 18 ? 15 : 9) : (age < 50 ? 18 : 8),
@@ -266,10 +269,12 @@ export function useNutritionStore() {
   };
 
   const getAverageNutrients = (days: number = 3) => {
-    const now = new Date();
-    const cutoff = new Date(now.setDate(now.getDate() - days)).getTime();
-    const recentLogs = logs.filter(l => l.timestamp >= cutoff);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    cutoffDate.setHours(0, 0, 0, 0);
+    const cutoff = cutoffDate.getTime();
     
+    const recentLogs = logs.filter(l => l.timestamp >= cutoff);
     if (recentLogs.length === 0) return null;
 
     const totals = recentLogs.reduce((acc, log) => {
@@ -308,10 +313,4 @@ export function useNutritionStore() {
     addPoints, calculateBMI, calculateRecommendedCalories,
     getAKGGoals, getAverageNutrients
   };
-}
-
-export interface MealPlan {
-  id: string;
-  name: string;
-  days: { [key: string]: Recipe[] };
 }
