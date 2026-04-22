@@ -44,7 +44,10 @@ const FoodSearch = () => {
       const data = await searchFoods(searchQuery, 15);
       setResults(data);
     } catch (err: any) {
-      if (err.name !== 'AbortError') showError("Gagal mencari makanan");
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        showError("Gagal mencari makanan. Periksa koneksi internet Anda.");
+      }
     } finally {
       setLoading(false);
     }
@@ -53,7 +56,7 @@ const FoodSearch = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query) performSearch(query);
-    }, 400); // Debounce lebih lama untuk akurasi pengetikan
+    }, 500);
     return () => clearTimeout(timer);
   }, [query, performSearch]);
 
@@ -61,8 +64,8 @@ const FoodSearch = () => {
     setSelectedFood(food);
     setTranslatedName('');
     setTranslating(true);
+    setAmount(100); // Reset amount to default
     
-    // Terjemahkan nama HANYA saat dipilih (On-Demand)
     try {
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
@@ -75,12 +78,14 @@ const FoodSearch = () => {
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Ditambahkan ke log harian!`);
+    showSuccess(`"${food.description}" ditambahkan ke log!`);
     setSelectedFood(null);
+    setQuery('');
+    setResults([]);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-4 max-w-4xl mx-auto animate-in fade-in duration-500 pb-20">
       <div className="relative group">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors">
           {loading ? <Loader2 className="animate-spin" /> : <Search />}
@@ -88,7 +93,7 @@ const FoodSearch = () => {
         <Input 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari makanan (English/Indonesia)..."
+          placeholder="Cari makanan (Nasi, Ayam, Apple...)"
           className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
         />
         {query && (
@@ -101,7 +106,7 @@ const FoodSearch = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-2">
         {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
           return (
@@ -115,24 +120,21 @@ const FoodSearch = () => {
                   "w-1.5 transition-all group-hover:w-3",
                   score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500"
                 )} />
-                <div className="p-4 flex-1 flex items-center justify-between">
+                <div className="p-3 flex-1 flex items-center justify-between">
                   <div className="min-w-0 pr-4">
-                    <h3 className="text-white font-bold truncate text-lg group-hover:text-cyan-400 transition-colors">
+                    <h3 className="text-white font-bold truncate text-sm group-hover:text-cyan-400 transition-colors">
                       {food.description}
                     </h3>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
-                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
-                      </Badge>
-                      <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
-                        {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
-                      </Badge>
+                    <div className="flex gap-2 mt-1">
+                      <span className="text-[10px] text-slate-500">
+                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal / 100g
+                      </span>
                       {food.dataType === 'Foundation' && (
-                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] border-cyan-500/30">VERIFIED</Badge>
+                        <Badge className="bg-cyan-500/20 text-cyan-400 text-[8px] h-4 border-cyan-500/30">VERIFIED</Badge>
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
+                  <ChevronRight className="h-4 w-4 text-slate-700 group-hover:text-cyan-400 transition-colors" />
                 </div>
               </CardContent>
             </Card>
@@ -140,32 +142,35 @@ const FoodSearch = () => {
         })}
 
         {!loading && query && results.length === 0 && (
-          <div className="text-center py-20 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
-            <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-4" />
-            <p className="text-slate-400 font-bold text-lg">Makanan tidak ditemukan</p>
+          <div className="text-center py-12 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/20">
+            <AlertCircle className="h-8 w-8 text-slate-700 mx-auto mb-2" />
+            <p className="text-slate-400 font-bold">Makanan tidak ditemukan</p>
+            <p className="text-[10px] text-slate-600 mt-1">Coba gunakan kata kunci yang lebih umum</p>
           </div>
         )}
       </div>
 
       <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
-        <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-3xl max-h-[90vh] flex flex-col rounded-3xl">
+        <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-2xl max-h-[95vh] flex flex-col rounded-3xl p-0 overflow-hidden">
           {selectedFood && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 text-cyan-400 mb-1">
-                  <Zap className="h-4 w-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Analisis Nutrisi</span>
-                </div>
-                <DialogTitle className="text-2xl font-bold">{selectedFood.description}</DialogTitle>
-                <div className="flex items-center gap-1.5 text-slate-500 text-xs italic">
-                  <Languages className="h-3 w-3" />
-                  <span>{translating ? "Menerjemahkan..." : `Nama Lokal: ${translatedName}`}</span>
-                </div>
-              </DialogHeader>
+              <div className="p-6 pb-0">
+                <DialogHeader>
+                  <div className="flex items-center gap-2 text-cyan-400 mb-1">
+                    <Zap className="h-4 w-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Analisis Nutrisi</span>
+                  </div>
+                  <DialogTitle className="text-xl font-bold leading-tight">{selectedFood.description}</DialogTitle>
+                  <div className="flex items-center gap-1.5 text-slate-500 text-[10px] italic">
+                    <Languages className="h-3 w-3" />
+                    <span>{translating ? "Menerjemahkan..." : `Nama Lokal: ${translatedName}`}</span>
+                  </div>
+                </DialogHeader>
+              </div>
 
-              <div className="flex-1 overflow-hidden py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                  <div className="space-y-6">
+              <ScrollArea className="flex-1 p-6">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800">
                       <label className="text-[10px] text-slate-500 uppercase font-bold mb-2 block">Porsi (Gram)</label>
                       <Input 
@@ -176,56 +181,55 @@ const FoodSearch = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Kalori</p>
-                        <p className="text-2xl font-black text-white">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 text-center">
+                        <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Kalori</p>
+                        <p className="text-xl font-black text-white">
                           {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
                         </p>
                       </div>
-                      <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Protein</p>
-                        <p className="text-2xl font-black text-blue-400">
+                      <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 text-center">
+                        <p className="text-[9px] text-slate-500 uppercase font-bold mb-1">Protein</p>
+                        <p className="text-xl font-black text-blue-400">
                           {(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g
                         </p>
                       </div>
                     </div>
-
-                    <HealthAnalyzer food={selectedFood} />
                   </div>
 
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center gap-2 mb-3">
+                  <HealthAnalyzer food={selectedFood} />
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
                       <ListFilter className="h-4 w-4 text-cyan-400" />
-                      <span className="text-xs font-bold text-slate-400 uppercase">Rincian Nutrisi</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Rincian Nutrisi Lengkap</span>
                     </div>
-                    <ScrollArea className="flex-1 bg-slate-900/30 rounded-2xl border border-slate-800 p-4">
-                      <div className="space-y-3">
-                        {selectedFood.foodNutrients
-                          .filter(n => n.value > 0)
-                          .map((nutrient, idx) => (
-                            <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-800/50 last:border-0">
-                              <span className="text-xs text-slate-400">{nutrient.nutrientName}</span>
-                              <span className="text-xs font-bold text-white">
-                                {(nutrient.value * (amount / 100)).toFixed(2)} {nutrient.unitName}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </ScrollArea>
+                    <div className="grid grid-cols-1 gap-2">
+                      {selectedFood.foodNutrients
+                        .filter(n => n.value > 0)
+                        .slice(0, 12)
+                        .map((nutrient, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-2 rounded-lg bg-slate-900/50 border border-slate-800/50">
+                            <span className="text-[10px] text-slate-400">{nutrient.nutrientName}</span>
+                            <span className="text-[10px] font-bold text-white">
+                              {(nutrient.value * (amount / 100)).toFixed(2)} {nutrient.unitName}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ScrollArea>
 
-              <DialogFooter className="pt-4">
+              <div className="p-6 pt-2 border-t border-slate-800 bg-slate-950">
                 <Button 
                   onClick={() => handleAdd(selectedFood, amount)}
-                  className="w-full bg-cyan-600 hover:bg-cyan-700 h-14 text-lg font-bold rounded-2xl"
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 h-12 font-bold rounded-xl"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Tambah ke Log
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah ke Log Harian
                 </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
         </DialogContent>
