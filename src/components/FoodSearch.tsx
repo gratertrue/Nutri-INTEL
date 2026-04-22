@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { searchFoods, FoodItem, getNutrientValue, calculateSmartScore, translateText } from '@/lib/usda-api';
 import { getProductByBarcode } from '@/lib/openfoodfacts-api';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
-import { Search, Loader2, ChevronRight, AlertCircle, X, ListFilter, Plus, Languages, Zap, ScanBarcode } from 'lucide-react';
+import { Search, Loader2, ChevronRight, AlertCircle, X, ListFilter, Plus, Languages, Zap, ScanBarcode, History, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from '@/utils/toast';
 import {
@@ -32,62 +32,59 @@ const FoodSearch = () => {
   const [amount, setAmount] = useState(100);
   const [showScanner, setShowScanner] = useState(false);
   
-  const { addLog } = useNutritionStore();
+  const { addLog, scanLogs, addScanLog } = useNutritionStore();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const performSearch = useCallback(async (searchQuery: string) => {
     const trimmed = searchQuery.trim();
     if (!trimmed) return;
 
-    // Batalkan pencarian sebelumnya jika ada
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
     setLoading(true);
     try {
+      // Cek apakah input adalah barcode (hanya angka dan panjang > 7)
+      if (/^\d{8,14}$/.test(trimmed)) {
+        const product = await getProductByBarcode(trimmed);
+        if (product) {
+          setResults([product]);
+          setHasSearched(true);
+          return;
+        }
+      }
+
+      // Jika bukan barcode atau barcode tidak ditemukan, cari di USDA
       const data = await searchFoods(trimmed, 20);
       setResults(data);
       setHasSearched(true);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        console.error("Search error:", err);
-        showError("Gagal mencari makanan. Coba lagi nanti.");
+        showError("Pencarian gagal.");
       }
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.length >= 3 && !showScanner) {
-        performSearch(query);
-      }
-    }, 600);
+      if (query.length >= 3 && !showScanner) performSearch(query);
+    }, 800);
     return () => clearTimeout(timer);
   }, [query, performSearch, showScanner]);
 
-  const handleBarcodeScan = async (barcode: string) => {
-    // 1. Tutup scanner segera
+  const handleBarcodeScan = (barcode: string) => {
     setShowScanner(false);
+    setQuery(barcode);
+    addScanLog(barcode, 'pending');
     
-    // 2. Beri jeda agar hardware kamera benar-benar rilis (PENTING UNTUK ANDROID)
-    setTimeout(async () => {
-      setLoading(true);
-      try {
-        const product = await getProductByBarcode(barcode);
-        if (product) {
-          handleSelectFood(product);
-          showSuccess("Produk ditemukan!");
-        } else {
-          showError("Produk tidak terdaftar di database.");
-        }
-      } catch (err) {
-        showError("Gagal memproses data barcode.");
-      } finally {
-        setLoading(false);
-      }
+    // Beri jeda transisi hardware
+    setTimeout(() => {
+      performSearch(barcode).then(() => {
+        // Update status log jika diperlukan (opsional untuk database lokal)
+        addScanLog(barcode, 'success');
+      });
     }, 500);
   };
 
@@ -99,7 +96,7 @@ const FoodSearch = () => {
       const idName = await translateText(food.description, 'en|id');
       setTranslatedName(idName);
     } catch (e) {
-      // Fallback ke nama asli
+      // Fallback
     } finally {
       setTranslating(false);
     }
@@ -113,10 +110,9 @@ const FoodSearch = () => {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {showScanner && (
           <BarcodeScanner 
-            key="global-scanner"
             onScan={handleBarcodeScan} 
             onClose={() => setShowScanner(false)} 
           />
@@ -133,7 +129,7 @@ const FoodSearch = () => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && performSearch(query)}
-              placeholder="Cari dalam B. Inggris (misal: Chicken)..."
+              placeholder="Cari Nama atau Scan Barcode..."
               className="pl-12 pr-12 bg-slate-900/80 border-slate-800 text-white h-14 text-lg rounded-2xl focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-2xl"
             />
             {query && (
@@ -158,11 +154,7 @@ const FoodSearch = () => {
         {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
           return (
-            <motion.div
-              key={food.fdcId}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
+            <motion.div key={food.fdcId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
               <Card 
                 className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer overflow-hidden group"
                 onClick={() => handleSelectFood(food)}
@@ -195,17 +187,44 @@ const FoodSearch = () => {
         })}
 
         {hasSearched && results.length === 0 && !loading && (
-          <div className="text-center py-12 space-y-4">
-            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 inline-block">
-              <AlertCircle className="h-12 w-12 text-slate-700 mx-auto mb-4" />
-              <h3 className="text-white font-bold text-xl">Tidak Ada Hasil</h3>
-              <p className="text-slate-500 max-w-xs mx-auto mt-2">
-                Gunakan istilah Bahasa Inggris untuk hasil yang lebih akurat.
-              </p>
-            </div>
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-slate-700 mx-auto mb-4" />
+            <h3 className="text-white font-bold text-xl">Tidak Ada Hasil</h3>
+            <p className="text-slate-500 mt-2">Coba gunakan istilah lain atau scan ulang.</p>
           </div>
         )}
       </div>
+
+      {/* Scan Logs Section */}
+      {scanLogs.length > 0 && (
+        <div className="mt-8 space-y-4">
+          <div className="flex items-center gap-2 text-slate-400 px-2">
+            <History className="h-4 w-4" />
+            <h3 className="text-xs font-bold uppercase tracking-widest">Riwayat Pemindaian (Scan Logs)</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {scanLogs.map((log) => (
+              <Card key={log.id} className="bg-slate-900/30 border-slate-800 p-3 flex items-center justify-between group hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => { setQuery(log.barcode); performSearch(log.barcode); }}>
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "p-2 rounded-lg",
+                    log.status === 'success' ? "bg-green-500/10 text-green-500" : "bg-amber-500/10 text-amber-500"
+                  )}>
+                    {log.status === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-mono text-white">{log.barcode}</p>
+                    <p className="text-[10px] text-slate-500">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-cyan-400">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={!!selectedFood} onOpenChange={(open) => !open && setSelectedFood(null)}>
         <DialogContent className="bg-slate-950 border-slate-800 text-white max-w-3xl max-h-[90vh] flex flex-col rounded-3xl">
@@ -235,25 +254,18 @@ const FoodSearch = () => {
                         className="bg-slate-950 border-slate-800 text-white text-center text-xl font-bold h-12"
                       />
                     </div>
-
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
                         <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Kalori</p>
-                        <p className="text-2xl font-black text-white">
-                          {Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}
-                        </p>
+                        <p className="text-2xl font-black text-white">{Math.round(getNutrientValue(selectedFood.foodNutrients, "Energy") * (amount / 100))}</p>
                       </div>
                       <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 text-center">
                         <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Protein</p>
-                        <p className="text-2xl font-black text-blue-400">
-                          {(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g
-                        </p>
+                        <p className="text-2xl font-black text-blue-400">{(getNutrientValue(selectedFood.foodNutrients, "Protein") * (amount / 100)).toFixed(1)}g</p>
                       </div>
                     </div>
-
                     <HealthAnalyzer food={selectedFood} />
                   </div>
-
                   <div className="flex flex-col h-full">
                     <div className="flex items-center gap-2 mb-3">
                       <ListFilter className="h-4 w-4 text-cyan-400" />
@@ -261,27 +273,19 @@ const FoodSearch = () => {
                     </div>
                     <ScrollArea className="flex-1 bg-slate-900/30 rounded-2xl border border-slate-800 p-4">
                       <div className="space-y-3">
-                        {selectedFood.foodNutrients
-                          .filter(n => n.value > 0)
-                          .map((nutrient, idx) => (
-                            <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-800/50 last:border-0">
-                              <span className="text-xs text-slate-400">{nutrient.nutrientName}</span>
-                              <span className="text-xs font-bold text-white">
-                                {(nutrient.value * (amount / 100)).toFixed(2)} {nutrient.unitName}
-                              </span>
-                            </div>
-                          ))}
+                        {selectedFood.foodNutrients.filter(n => n.value > 0).map((nutrient, idx) => (
+                          <div key={idx} className="flex justify-between items-center py-2 border-b border-slate-800/50 last:border-0">
+                            <span className="text-xs text-slate-400">{nutrient.nutrientName}</span>
+                            <span className="text-xs font-bold text-white">{(nutrient.value * (amount / 100)).toFixed(2)} {nutrient.unitName}</span>
+                          </div>
+                        ))}
                       </div>
                     </ScrollArea>
                   </div>
                 </div>
               </div>
-
               <DialogFooter className="pt-4">
-                <Button 
-                  onClick={() => handleAdd(selectedFood, amount)}
-                  className="w-full bg-cyan-600 hover:bg-cyan-700 h-14 text-lg font-bold rounded-2xl"
-                >
+                <Button onClick={() => handleAdd(selectedFood, amount)} className="w-full bg-cyan-600 hover:bg-cyan-700 h-14 text-lg font-bold rounded-2xl">
                   <Plus className="h-5 w-5 mr-2" />
                   Tambahkan ke Log
                 </Button>

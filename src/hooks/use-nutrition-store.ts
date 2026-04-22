@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FoodItem, calculateSmartScore, getNutrientValue } from '@/lib/usda-api';
+import { FoodItem, getNutrientValue } from '@/lib/usda-api';
 import confetti from 'canvas-confetti';
 
 export interface UserProfile {
@@ -29,11 +29,11 @@ export interface LogEntry {
   timestamp: number;
 }
 
-export interface SleepSession {
+export interface ScanLog {
   id: string;
-  startTime: number;
-  endTime: number;
-  durationHours: number;
+  barcode: string;
+  status: 'success' | 'failed' | 'pending';
+  timestamp: number;
 }
 
 export interface Achievement {
@@ -49,7 +49,7 @@ export interface WearableData {
   sleepHours: number;
   isSleeping: boolean;
   sleepStartTime: number | null;
-  sleepHistory: SleepSession[];
+  sleepHistory: any[];
 }
 
 const INITIAL_PROFILE: UserProfile = {
@@ -85,24 +85,24 @@ export function useNutritionStore() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [scanLogs, setScanLogs] = useState<ScanLog[]>(() => {
+    const saved = localStorage.getItem('nutrition_scan_logs');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [recipes, setRecipes] = useState<Recipe[]>(() => {
     const saved = localStorage.getItem('nutrition_recipes');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>(() => {
+  const [mealPlans, setMealPlans] = useState<any[]>(() => {
     const saved = localStorage.getItem('nutrition_meal_plans');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [wearableData, setWearableData] = useState<WearableData>(() => {
     const saved = localStorage.getItem('nutrition_wearable');
-    const defaultData = { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return { ...defaultData, ...parsed, sleepHistory: parsed.sleepHistory || [] };
-    }
-    return defaultData;
+    return saved ? JSON.parse(saved) : { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
   });
 
   const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
@@ -115,13 +115,14 @@ export function useNutritionStore() {
   useEffect(() => {
     localStorage.setItem('nutrition_profile', JSON.stringify(profile));
     localStorage.setItem('nutrition_logs', JSON.stringify(logs));
+    localStorage.setItem('nutrition_scan_logs', JSON.stringify(scanLogs));
     localStorage.setItem('nutrition_recipes', JSON.stringify(recipes));
     localStorage.setItem('nutrition_meal_plans', JSON.stringify(mealPlans));
     localStorage.setItem('nutrition_wearable', JSON.stringify(wearableData));
     localStorage.setItem('nutrition_water', waterIntake.toString());
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
-  }, [profile, logs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
+  }, [profile, logs, scanLogs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
 
   const addLog = (food: FoodItem, amount: number) => {
     const newLog: LogEntry = {
@@ -135,43 +136,14 @@ export function useNutritionStore() {
     checkAchievements('first_log');
   };
 
-  const toggleSleep = () => {
-    setWearableData(prev => {
-      if (!prev.isSleeping) {
-        return { ...prev, isSleeping: true, sleepStartTime: Date.now() };
-      } else {
-        const endTime = Date.now();
-        const startTime = prev.sleepStartTime || endTime;
-        const durationMs = endTime - startTime;
-        const durationHours = Number((durationMs / (1000 * 60 * 60)).toFixed(2));
-        
-        const newSession: SleepSession = {
-          id: Math.random().toString(36).substr(2, 9),
-          startTime,
-          endTime,
-          durationHours
-        };
-
-        const history = prev.sleepHistory || [];
-        return { 
-          ...prev, 
-          isSleeping: false, 
-          sleepStartTime: null, 
-          sleepHours: Number((prev.sleepHours + durationHours).toFixed(1)),
-          sleepHistory: [newSession, ...history].slice(0, 10)
-        };
-      }
-    });
-  };
-
-  const resetSleep = () => {
-    setWearableData(prev => ({
-      ...prev,
-      isSleeping: false,
-      sleepStartTime: null,
-      sleepHours: 0,
-      sleepHistory: []
-    }));
+  const addScanLog = (barcode: string, status: 'success' | 'failed' | 'pending') => {
+    const newScan: ScanLog = {
+      id: Math.random().toString(36).substr(2, 9),
+      barcode,
+      status,
+      timestamp: Date.now(),
+    };
+    setScanLogs(prev => [newScan, ...prev].slice(0, 20));
   };
 
   const addWater = (amount: number) => {
@@ -192,17 +164,6 @@ export function useNutritionStore() {
     setRecipes(prev => [...prev, newRecipe]);
     addPoints(50);
     checkAchievements('recipe_master');
-  };
-
-  const addMealPlan = (name: string, days: { [key: string]: Recipe[] }) => {
-    const newPlan: MealPlan = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      days,
-    };
-    setMealPlans(prev => [...prev, newPlan]);
-    addPoints(100);
-    checkAchievements('planner_pro');
   };
 
   const addPoints = (amount: number) => {
@@ -227,35 +188,22 @@ export function useNutritionStore() {
   };
 
   const calculateRecommendedCalories = () => {
-    // Harris-Benedict Revised Formula
     let bmr = 0;
     if (profile.gender === 'male') {
       bmr = 88.362 + (13.397 * profile.weight) + (4.799 * profile.height) - (5.677 * profile.age);
     } else {
       bmr = 447.593 + (9.247 * profile.weight) + (3.098 * profile.height) - (4.330 * profile.age);
     }
-
-    const activityFactors = {
-      sedentary: 1.2, // Ringan
-      light: 1.4,     // Cukup Aktif
-      moderate: 1.6,  // Aktif
-      active: 1.8,    // Sangat Aktif
-      very_active: 2.0
-    };
-
+    const activityFactors = { sedentary: 1.2, light: 1.4, moderate: 1.6, active: 1.8, very_active: 2.0 };
     let tdee = bmr * activityFactors[profile.activityLevel];
-
     if (profile.goal === 'weight_loss') tdee -= 500;
     if (profile.goal === 'muscle_gain') tdee += 300;
-
     return Math.round(tdee);
   };
 
   const getAKGGoals = () => {
     const isMale = profile.gender === 'male';
     const age = profile.age;
-
-    // Simplified AKG Indonesia (Permenkes 28/2019)
     return {
       vitaminC: isMale ? 90 : 75,
       iron: isMale ? (age < 18 ? 15 : 9) : (age < 50 ? 18 : 8),
@@ -269,9 +217,7 @@ export function useNutritionStore() {
     const now = new Date();
     const cutoff = new Date(now.setDate(now.getDate() - days)).getTime();
     const recentLogs = logs.filter(l => l.timestamp >= cutoff);
-    
     if (recentLogs.length === 0) return null;
-
     const totals = recentLogs.reduce((acc, log) => {
       const factor = log.amount / 100;
       acc.calories += getNutrientValue(log.food.foodNutrients, "Energy") * factor;
@@ -284,7 +230,6 @@ export function useNutritionStore() {
       acc.vitaminA += getNutrientValue(log.food.foodNutrients, "Vitamin A") * factor;
       return acc;
     }, { calories: 0, protein: 0, carbs: 0, fat: 0, vitaminC: 0, iron: 0, calcium: 0, vitaminA: 0 });
-
     return {
       calories: totals.calories / days,
       protein: totals.protein / days,
@@ -300,18 +245,13 @@ export function useNutritionStore() {
   return { 
     profile, setProfile, 
     logs, addLog, 
+    scanLogs, addScanLog,
     recipes, addRecipe,
-    mealPlans, addMealPlan,
-    wearableData, toggleSleep, resetSleep,
+    mealPlans,
+    wearableData,
     waterIntake, addWater, setWaterIntake,
     points, achievements, 
     addPoints, calculateBMI, calculateRecommendedCalories,
     getAKGGoals, getAverageNutrients
   };
-}
-
-export interface MealPlan {
-  id: string;
-  name: string;
-  days: { [key: string]: Recipe[] };
 }
