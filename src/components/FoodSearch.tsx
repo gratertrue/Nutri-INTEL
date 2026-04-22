@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import HealthAnalyzer from './HealthAnalyzer';
 import BarcodeScanner from './BarcodeScanner';
 import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const FoodSearch = () => {
   const [query, setQuery] = useState('');
@@ -48,7 +49,7 @@ const FoodSearch = () => {
       setHasSearched(true);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        showError("Search failed. Please check your connection.");
+        showError("Pencarian gagal. Periksa koneksi Anda.");
       }
     } finally {
       setLoading(false);
@@ -63,25 +64,25 @@ const FoodSearch = () => {
   }, [query, performSearch, showScanner]);
 
   const handleBarcodeScan = async (barcode: string) => {
-    // Tutup scanner dulu dan beri jeda singkat agar kamera benar-benar mati
     setShowScanner(false);
     
+    // Jeda transisi untuk memastikan kamera benar-benar mati sebelum memproses data
     setTimeout(async () => {
       setLoading(true);
       try {
         const product = await getProductByBarcode(barcode);
         if (product) {
           handleSelectFood(product);
-          showSuccess("Product found!");
+          showSuccess("Produk ditemukan!");
         } else {
-          showError("Product not found in database.");
+          showError("Produk tidak ditemukan di database.");
         }
       } catch (err) {
-        showError("Error processing barcode.");
+        showError("Gagal memproses barcode.");
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 400);
   };
 
   const handleSelectFood = async (food: FoodItem) => {
@@ -100,18 +101,20 @@ const FoodSearch = () => {
 
   const handleAdd = (food: FoodItem, logAmount: number) => {
     addLog(food, logAmount);
-    showSuccess(`Added to log!`);
+    showSuccess(`Berhasil ditambahkan!`);
     setSelectedFood(null);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
-      {showScanner && (
-        <BarcodeScanner 
-          onScan={handleBarcodeScan} 
-          onClose={() => setShowScanner(false)} 
-        />
-      )}
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <AnimatePresence>
+        {showScanner && (
+          <BarcodeScanner 
+            onScan={handleBarcodeScan} 
+            onClose={() => setShowScanner(false)} 
+          />
+        )}
+      </AnimatePresence>
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
@@ -143,53 +146,50 @@ const FoodSearch = () => {
           </Button>
           <Button 
             onClick={() => setShowScanner(true)}
-            className="h-14 w-14 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 shadow-2xl shrink-0"
+            className="h-14 w-14 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 shadow-2xl shrink-0 group"
           >
-            <ScanBarcode className="h-6 w-6 text-cyan-400" />
+            <ScanBarcode className="h-6 w-6 text-cyan-400 group-hover:scale-110 transition-transform" />
           </Button>
         </div>
-        
-        <Button 
-          onClick={() => performSearch(query)}
-          disabled={loading || query.length < 2}
-          className="w-full h-12 rounded-xl bg-cyan-600 hover:bg-cyan-700 font-bold sm:hidden"
-        >
-          {loading ? "Searching..." : "Search Food"}
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
         {results.map((food) => {
           const score = calculateSmartScore(food.foodNutrients);
           return (
-            <Card 
-              key={food.fdcId} 
-              className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer overflow-hidden group"
-              onClick={() => handleSelectFood(food)}
+            <motion.div
+              key={food.fdcId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              <CardContent className="p-0 flex items-stretch">
-                <div className={cn(
-                  "w-1.5 transition-all group-hover:w-3",
-                  score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500"
-                )} />
-                <div className="p-4 flex-1 flex items-center justify-between">
-                  <div className="min-w-0 pr-4">
-                    <h3 className="text-white font-bold truncate text-lg group-hover:text-cyan-400 transition-colors">
-                      {food.description}
-                    </h3>
-                    <div className="flex gap-2 mt-2">
-                      <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
-                        {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
-                      </Badge>
-                      <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
-                        {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
-                      </Badge>
+              <Card 
+                className="bg-slate-900/50 border-slate-800 hover:border-cyan-500/50 transition-all cursor-pointer overflow-hidden group"
+                onClick={() => handleSelectFood(food)}
+              >
+                <CardContent className="p-0 flex items-stretch">
+                  <div className={cn(
+                    "w-1.5 transition-all group-hover:w-3",
+                    score > 70 ? "bg-green-500" : score > 40 ? "bg-yellow-500" : "bg-red-500"
+                  )} />
+                  <div className="p-4 flex-1 flex items-center justify-between">
+                    <div className="min-w-0 pr-4">
+                      <h3 className="text-white font-bold truncate text-lg group-hover:text-cyan-400 transition-colors">
+                        {food.description}
+                      </h3>
+                      <div className="flex gap-2 mt-2">
+                        <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-slate-400">
+                          {Math.round(getNutrientValue(food.foodNutrients, "Energy"))} kcal
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] border-slate-800 bg-slate-950/50 text-blue-400">
+                          {getNutrientValue(food.foodNutrients, "Protein").toFixed(1)}g Protein
+                        </Badge>
+                      </div>
                     </div>
+                    <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
                   </div>
-                  <ChevronRight className="h-5 w-5 text-slate-700 group-hover:text-cyan-400 transition-colors" />
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
 
