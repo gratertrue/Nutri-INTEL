@@ -200,6 +200,10 @@ export function useNutritionStore() {
     checkAchievements('recipe_master');
   };
 
+  const deleteRecipe = (id: string) => {
+    setRecipes(prev => prev.filter(r => r.id !== id));
+  };
+
   const addMealPlan = (name: string, days: { [key: string]: Recipe[] }) => {
     const newPlan: MealPlan = {
       id: Math.random().toString(36).substr(2, 9),
@@ -334,7 +338,7 @@ export function useNutritionStore() {
   return { 
     profile, setProfile, 
     logs, addLog, 
-    recipes, addRecipe,
+    recipes, addRecipe, deleteRecipe,
     mealPlans, addMealPlan,
     wearableData, toggleSleep, resetSleep,
     waterIntake, addWater, setWaterIntake,
