@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Search, Utensils, Calendar, History, User, Trophy, Droplets, Zap, Flame } from 'lucide-react';
+import { LayoutDashboard, Search, Utensils, Calendar, History, User, Trophy, Droplets, Zap, Flame, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ const Sidebar = ({ activeTab, setActiveTab }: SidebarProps) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'search', label: 'Cari Makanan', icon: Search },
+    { id: 'community', label: 'Komunitas', icon: Users },
     { id: 'recipes', label: 'Pembuat Resep', icon: Utensils },
     { id: 'planner', label: 'Perencana Makan', icon: Calendar },
     { id: 'hydration', label: 'Hidrasi', icon: Droplets },
