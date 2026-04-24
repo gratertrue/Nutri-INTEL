@@ -81,29 +81,42 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
 ];
 
 export function useNutritionStore() {
-  const safeParse = (key: string, fallback: any) => {
-    try {
-      const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : fallback;
-    } catch (e) {
-      console.error(`Error parsing ${key}:`, e);
-      return fallback;
-    }
-  };
+  const [profile, setProfile] = useState<UserProfile>(() => {
+    const saved = localStorage.getItem('nutrition_profile');
+    return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+  });
 
-  const [profile, setProfile] = useState<UserProfile>(() => safeParse('nutrition_profile', INITIAL_PROFILE));
-  const [logs, setLogs] = useState<LogEntry[]>(() => safeParse('nutrition_logs', []));
-  const [recipes, setRecipes] = useState<Recipe[]>(() => safeParse('nutrition_recipes', []));
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>(() => safeParse('nutrition_meal_plans', []));
+  const [logs, setLogs] = useState<LogEntry[]>(() => {
+    const saved = localStorage.getItem('nutrition_logs');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [recipes, setRecipes] = useState<Recipe[]>(() => {
+    const saved = localStorage.getItem('nutrition_recipes');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>(() => {
+    const saved = localStorage.getItem('nutrition_meal_plans');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [wearableData, setWearableData] = useState<WearableData>(() => {
+    const saved = localStorage.getItem('nutrition_wearable');
     const defaultData = { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
-    const saved = safeParse('nutrition_wearable', defaultData);
-    return { ...defaultData, ...saved };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...defaultData, ...parsed, sleepHistory: parsed.sleepHistory || [] };
+    }
+    return defaultData;
   });
 
   const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
   const [points, setPoints] = useState(() => Number(localStorage.getItem('nutrition_points') || 0));
-  const [achievements, setAchievements] = useState<Achievement[]>(() => safeParse('nutrition_achievements', INITIAL_ACHIEVEMENTS));
+  const [achievements, setAchievements] = useState<Achievement[]>(() => {
+    const saved = localStorage.getItem('nutrition_achievements');
+    return saved ? JSON.parse(saved) : INITIAL_ACHIEVEMENTS;
+  });
 
   useEffect(() => {
     localStorage.setItem('nutrition_profile', JSON.stringify(profile));
@@ -287,6 +300,9 @@ export function useNutritionStore() {
     };
   };
 
+  /**
+   * Mengonversi resep menjadi format FoodItem (untuk pencarian)
+   */
   const convertRecipeToFood = (recipe: Recipe): FoodItem => {
     const nutrientTotals: Record<string, { value: number, unit: string, id: number }> = {};
     

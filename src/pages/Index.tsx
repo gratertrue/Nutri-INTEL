@@ -11,7 +11,6 @@ import NutritionHistory from '@/components/NutritionHistory';
 import WaterTracker from '@/components/WaterTracker';
 import SleepTracker from '@/components/SleepTracker';
 import Goals from '@/components/Goals';
-import Community from '@/components/Community';
 import OnboardingGuide from '@/components/OnboardingGuide';
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,8 +67,6 @@ const Index = () => {
         );
       case 'search':
         return <FoodSearch />;
-      case 'community':
-        return <Community />;
       case 'recipes':
         return <RecipeBuilder />;
       case 'planner':

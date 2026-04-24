@@ -8,8 +8,7 @@ import {
   History, 
   Droplets, 
   Trophy,
-  ChevronRight,
-  Users
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +24,6 @@ const MobileNav = ({ activeTab, setActiveTab }: MobileNavProps) => {
   const items = [
     { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
     { id: 'search', label: 'Cari', icon: Search },
-    { id: 'community', label: 'Komunitas', icon: Users },
     { id: 'hydration', label: 'Hidrasi', icon: Droplets },
     { id: 'recipes', label: 'Resep', icon: Utensils },
     { id: 'planner', label: 'Rencana', icon: Calendar },
@@ -37,6 +35,7 @@ const MobileNav = ({ activeTab, setActiveTab }: MobileNavProps) => {
   const checkScroll = () => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      // Tampilkan panah jika belum sampai di ujung kanan (toleransi 5px)
       setShowRightArrow(scrollLeft + clientWidth < scrollWidth - 5);
     }
   };
@@ -80,6 +79,7 @@ const MobileNav = ({ activeTab, setActiveTab }: MobileNavProps) => {
           ))}
         </div>
 
+        {/* Right Arrow Indicator */}
         {showRightArrow && (
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-950 to-transparent pointer-events-none flex items-center justify-end pr-1">
             <ChevronRight className="h-4 w-4 text-cyan-400 animate-pulse" />
