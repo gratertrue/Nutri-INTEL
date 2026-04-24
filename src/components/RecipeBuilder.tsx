@@ -4,16 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useNutritionStore } from '@/hooks/use-nutrition-store';
 import { searchFoods, FoodItem, getNutrientValue } from '@/lib/usda-api';
-import { Search, Plus, Trash2, Save, ChefHat } from 'lucide-react';
+import { Search, Plus, Trash2, Save, ChefHat, Share2, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase';
 
 const RecipeBuilder = () => {
   const [recipeName, setRecipeName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
   const [ingredients, setIngredients] = useState<{ food: FoodItem; amount: number }[]>([]);
-  const { addRecipe } = useNutritionStore();
+  const [isUploading, setIsUploading] = useState(false);
+  const { addRecipe, profile } = useNutritionStore();
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -36,15 +38,51 @@ const RecipeBuilder = () => {
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
+  const totalCalories = Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Energy") * (ing.amount/100)), 0));
+  const totalProtein = Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Protein") * (ing.amount/100)), 0));
+
   const handleSave = () => {
     if (!recipeName.trim() || ingredients.length === 0) {
       showError("Berikan nama dan setidaknya satu bahan");
       return;
     }
     addRecipe(recipeName, ingredients);
-    showSuccess(`Resep "${recipeName}" disimpan!`);
+    showSuccess(`Resep "${recipeName}" disimpan secara lokal!`);
     setRecipeName('');
     setIngredients([]);
+  };
+
+  const handleUploadToCommunity = async () => {
+    if (!recipeName.trim() || ingredients.length === 0) {
+      showError("Lengkapi resep sebelum membagikan");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const { error } = await supabase
+        .from('community_recipes')
+        .insert([
+          {
+            author_name: profile.name,
+            recipe_name: recipeName,
+            calories: totalCalories,
+            protein: totalProtein,
+            tags: ['User Recipe'],
+            ingredients_data: ingredients // Menyimpan struktur bahan
+          }
+        ]);
+
+      if (error) throw error;
+      
+      showSuccess("Resep berhasil dibagikan ke komunitas!");
+      handleSave(); // Simpan lokal juga
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showError("Gagal membagikan resep. Pastikan Supabase sudah terhubung.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -125,10 +163,23 @@ const RecipeBuilder = () => {
             ))}
           </div>
 
-          <Button onClick={handleSave} className="w-full bg-cyan-600 hover:bg-cyan-700 mt-4">
-            <Save className="h-4 w-4 mr-2" />
-            Simpan Resep
-          </Button>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <Button onClick={handleSave} variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
+              <Save className="h-4 w-4 mr-2" />
+              Simpan Lokal
+            </Button>
+            <Button 
+              onClick={handleUploadToCommunity} 
+              disabled={isUploading}
+              className="bg-cyan-600 hover:bg-cyan-700"
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <><Share2 className="h-4 w-4 mr-2" /> Bagikan</>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -146,15 +197,11 @@ const RecipeBuilder = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-800/30 rounded-xl text-center">
                   <p className="text-xs text-slate-500 uppercase">Total Kalori</p>
-                  <p className="text-2xl font-bold text-white">
-                    {Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Energy") * (ing.amount/100)), 0))}
-                  </p>
+                  <p className="text-2xl font-bold text-white">{totalCalories}</p>
                 </div>
                 <div className="p-4 bg-slate-800/30 rounded-xl text-center">
                   <p className="text-xs text-slate-500 uppercase">Total Protein</p>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {Math.round(ingredients.reduce((acc, ing) => acc + (getNutrientValue(ing.food.foodNutrients, "Protein") * (ing.amount/100)), 0))}g
-                  </p>
+                  <p className="text-2xl font-bold text-blue-400">{totalProtein}g</p>
                 </div>
               </div>
             </div>
