@@ -1,10 +1,28 @@
 /**
- * USDA & Translation API Utility
+ * USDA & Translation API Utility - High Accuracy Version
  */
 
-// Menggunakan kunci API baru yang diberikan pengguna
 const USDA_API_KEY = "lPjMa22MuuIYtCILxkHRdEHse3eM7uqH5sHEbSKR"; 
 const BASE_URL = "https://api.nal.usda.gov/fdc/v1";
+
+// Mapping ID Nutrien Resmi USDA untuk Akurasi 100%
+export const NUTRIENT_IDS = {
+  ENERGY: 1008,
+  PROTEIN: 1003,
+  FAT: 1004,
+  CARBS: 1005,
+  FIBER: 1079,
+  SUGAR: 2000,
+  CALCIUM: 1087,
+  IRON: 1089,
+  MAGNESIUM: 1090,
+  ZINC: 1095,
+  VIT_C: 1162,
+  VIT_A: 1106,
+  VIT_B12: 1178,
+  SODIUM: 1093,
+  SAT_FAT: 1258
+};
 
 export interface Nutrient {
   nutrientId: number;
@@ -33,15 +51,12 @@ export async function translateText(text: string, pair: 'id|en' | 'en|id'): Prom
   }
 }
 
-function isLikelyEnglish(text: string): boolean {
-  const commonEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato)\b/i;
-  return commonEnglish.test(text) || !/[^\x00-\x7F]/.test(text);
-}
-
 export async function searchFoods(query: string, pageSize: number = 15): Promise<FoodItem[]> {
   try {
     let searchTerms = query;
-    if (!isLikelyEnglish(query)) {
+    const isEnglish = /\b(chicken|rice|egg|bread|milk|water|beef|apple|fruit|meat|fish|potato)\b/i.test(query);
+    
+    if (!isEnglish) {
       searchTerms = await translateText(query, 'id|en');
     }
 
@@ -53,14 +68,7 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
     });
 
     const response = await fetch(`${BASE_URL}/foods/search?${params.toString()}`);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      if (response.status === 403) {
-        throw new Error("Kunci API USDA bermasalah. Silakan periksa kembali kunci Anda.");
-      }
-      throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
     const data = await response.json();
     return data.foods || [];
@@ -70,17 +78,26 @@ export async function searchFoods(query: string, pageSize: number = 15): Promise
   }
 }
 
+// Fungsi pengambil nilai berdasarkan ID (Lebih Akurat daripada Nama)
+export function getNutrientById(nutrients: Nutrient[], id: number): number {
+  const n = nutrients.find(n => n.nutrientId === id);
+  return n ? n.value : 0;
+}
+
+// Fallback untuk pencarian nama jika ID tidak tersedia
 export function getNutrientValue(nutrients: Nutrient[], name: string): number {
   const n = nutrients.find(n => n.nutrientName.toLowerCase().includes(name.toLowerCase()));
   return n ? n.value : 0;
 }
 
 export function calculateSmartScore(nutrients: Nutrient[]): number {
-  const protein = getNutrientValue(nutrients, "Protein");
-  const fiber = getNutrientValue(nutrients, "Fiber");
-  const sugar = getNutrientValue(nutrients, "Sugars");
-  let score = 50;
-  score += (protein * 2) + (fiber * 3);
-  score -= (sugar * 2);
+  const protein = getNutrientById(nutrients, NUTRIENT_IDS.PROTEIN);
+  const fiber = getNutrientById(nutrients, NUTRIENT_IDS.FIBER);
+  const sugar = getNutrientById(nutrients, NUTRIENT_IDS.SUGAR);
+  const satFat = getNutrientById(nutrients, NUTRIENT_IDS.SAT_FAT);
+  
+  let score = 60;
+  score += (protein * 1.5) + (fiber * 2);
+  score -= (sugar * 1.5) + (satFat * 2);
   return Math.max(0, Math.min(100, Math.round(score)));
 }

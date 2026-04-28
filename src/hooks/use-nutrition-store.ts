@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FoodItem, Nutrient, getNutrientValue } from '@/lib/usda-api';
+import { FoodItem, Nutrient, getNutrientById, NUTRIENT_IDS } from '@/lib/usda-api';
 import confetti from 'canvas-confetti';
 
 export interface UserProfile {
@@ -268,7 +268,9 @@ export function useNutritionStore() {
       iron: isMale ? (age < 18 ? 15 : 9) : (age < 50 ? 18 : 8),
       calcium: age < 18 ? 1200 : 1000,
       vitaminA: isMale ? 650 : 600,
-      zinc: isMale ? 11 : 8
+      zinc: isMale ? 11 : 8,
+      magnesium: isMale ? 400 : 310,
+      vitaminB12: 2.4
     };
   };
 
@@ -281,16 +283,23 @@ export function useNutritionStore() {
 
     const totals = recentLogs.reduce((acc, log) => {
       const factor = log.amount / 100;
-      acc.calories += getNutrientValue(log.food.foodNutrients, "Energy") * factor;
-      acc.protein += getNutrientValue(log.food.foodNutrients, "Protein") * factor;
-      acc.carbs += getNutrientValue(log.food.foodNutrients, "Carbohydrate") * factor;
-      acc.fat += getNutrientValue(log.food.foodNutrients, "Total lipid (fat)") * factor;
-      acc.vitaminC += getNutrientValue(log.food.foodNutrients, "Vitamin C") * factor;
-      acc.iron += getNutrientValue(log.food.foodNutrients, "Iron") * factor;
-      acc.calcium += getNutrientValue(log.food.foodNutrients, "Calcium") * factor;
-      acc.vitaminA += getNutrientValue(log.food.foodNutrients, "Vitamin A") * factor;
+      acc.calories += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.ENERGY) * factor;
+      acc.protein += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.PROTEIN) * factor;
+      acc.carbs += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.CARBS) * factor;
+      acc.fat += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.FAT) * factor;
+      acc.vitaminC += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.VIT_C) * factor;
+      acc.iron += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.IRON) * factor;
+      acc.calcium += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.CALCIUM) * factor;
+      acc.vitaminA += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.VIT_A) * factor;
+      acc.zinc += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.ZINC) * factor;
+      acc.magnesium += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.MAGNESIUM) * factor;
+      acc.vitaminB12 += getNutrientById(log.food.foodNutrients, NUTRIENT_IDS.VIT_B12) * factor;
       return acc;
-    }, { calories: 0, protein: 0, carbs: 0, fat: 0, vitaminC: 0, iron: 0, calcium: 0, vitaminA: 0 });
+    }, { 
+      calories: 0, protein: 0, carbs: 0, fat: 0, 
+      vitaminC: 0, iron: 0, calcium: 0, vitaminA: 0, 
+      zinc: 0, magnesium: 0, vitaminB12: 0 
+    });
 
     return {
       calories: totals.calories / days,
@@ -301,12 +310,12 @@ export function useNutritionStore() {
       iron: totals.iron / days,
       calcium: totals.calcium / days,
       vitaminA: totals.vitaminA / days,
+      zinc: totals.zinc / days,
+      magnesium: totals.magnesium / days,
+      vitaminB12: totals.vitaminB12 / days,
     };
   };
 
-  /**
-   * Mengonversi resep menjadi format FoodItem (untuk pencarian)
-   */
   const convertRecipeToFood = (recipe: Recipe): FoodItem => {
     const nutrientTotals: Record<string, { value: number, unit: string, id: number }> = {};
     

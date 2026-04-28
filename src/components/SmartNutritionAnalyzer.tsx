@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const SmartNutritionAnalyzer = () => {
   const { getAKGGoals, getAverageNutrients, logs } = useNutritionStore();
   const akg = getAKGGoals();
-  const avg = getAverageNutrients(3); // Rata-rata 3 hari
+  const avg = getAverageNutrients(3); 
 
   if (!avg || logs.length === 0) {
     return (
@@ -28,7 +28,7 @@ const SmartNutritionAnalyzer = () => {
       target: akg.vitaminC, 
       unit: 'mg', 
       impact: 'Mendukung sistem imun dan produksi kolagen.',
-      research: 'Riset menunjukkan defisiensi Vitamin C kronis dapat memperlambat penyembuhan luka dan meningkatkan kerentanan terhadap infeksi saluran pernapasan.'
+      research: 'Riset menunjukkan defisiensi Vitamin C kronis dapat memperlambat penyembuhan luka.'
     },
     { 
       name: 'Zat Besi', 
@@ -36,7 +36,7 @@ const SmartNutritionAnalyzer = () => {
       target: akg.iron, 
       unit: 'mg', 
       impact: 'Penting untuk transportasi oksigen dan energi.',
-      research: 'Studi klinis mengaitkan kadar besi rendah dengan penurunan fungsi kognitif, konsentrasi, dan kelelahan kronis akibat berkurangnya suplai oksigen ke otak.'
+      research: 'Studi klinis mengaitkan kadar besi rendah dengan penurunan fungsi kognitif.'
     },
     { 
       name: 'Kalsium', 
@@ -44,15 +44,31 @@ const SmartNutritionAnalyzer = () => {
       target: akg.calcium, 
       unit: 'mg', 
       impact: 'Menjaga kepadatan tulang dan fungsi otot.',
-      research: 'Kekurangan kalsium jangka panjang memaksa tubuh mengambil cadangan dari tulang, meningkatkan risiko osteoporosis dan gangguan kontraksi otot (kram).'
+      research: 'Kekurangan kalsium jangka panjang meningkatkan risiko osteoporosis.'
     },
     { 
-      name: 'Vitamin A', 
-      current: avg.vitaminA, 
-      target: akg.vitaminA, 
+      name: 'Zinc', 
+      current: avg.zinc, 
+      target: akg.zinc, 
+      unit: 'mg', 
+      impact: 'Krusial untuk sintesis protein dan pembelahan sel.',
+      research: 'Zinc berperan dalam lebih dari 300 enzim tubuh; defisiensi menghambat pertumbuhan fisik.'
+    },
+    { 
+      name: 'Magnesium', 
+      current: avg.magnesium, 
+      target: akg.magnesium, 
+      unit: 'mg', 
+      impact: 'Mengatur fungsi saraf dan tekanan darah.',
+      research: 'Magnesium diperlukan untuk produksi energi ATP; rendahnya kadar memicu kelelahan otot.'
+    },
+    { 
+      name: 'Vitamin B12', 
+      current: avg.vitaminB12, 
+      target: akg.vitaminB12, 
       unit: 'mcg', 
-      impact: 'Mendukung kesehatan mata dan regenerasi sel.',
-      research: 'Penelitian menunjukkan Vitamin A krusial untuk diferensiasi sel; kekurangannya dapat menyebabkan xerophthalmia (mata kering) dan penurunan integritas mukosa tubuh.'
+      impact: 'Penting untuk pembentukan sel darah merah dan saraf.',
+      research: 'Defisiensi B12 dapat menyebabkan anemia megaloblastik dan gangguan sistem saraf pusat.'
     },
   ];
 
@@ -66,51 +82,44 @@ const SmartNutritionAnalyzer = () => {
         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Berdasarkan AKG Indonesia & Riset Kesehatan</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {micros.map((m) => {
-          const percentage = Math.min((m.current / m.target) * 100, 100);
-          const isLow = percentage < 50;
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {micros.map((m) => {
+            const percentage = Math.min((m.current / m.target) * 100, 100);
+            const isLow = percentage < 50;
 
-          return (
-            <div key={m.name} className="space-y-2 p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 group hover:border-purple-500/30 transition-all">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white">{m.name}</span>
-                  {isLow ? (
-                    <AlertCircle className="h-3 w-3 text-amber-500" />
-                  ) : (
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  )}
+            return (
+              <div key={m.name} className="space-y-2 p-3 rounded-xl bg-slate-800/30 border border-slate-700/50 group hover:border-purple-500/30 transition-all">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-white">{m.name}</span>
+                    {isLow ? (
+                      <AlertCircle className="h-3 w-3 text-amber-500" />
+                    ) : (
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    )}
+                  </div>
+                  <span className="text-[9px] text-slate-400">
+                    {Math.round(m.current * 10) / 10} / {m.target}
+                  </span>
                 </div>
-                <span className="text-[10px] text-slate-400">
-                  Rata-rata: {Math.round(m.current)} / {m.target} {m.unit}
-                </span>
-              </div>
-              <Progress value={percentage} className={cn("h-1.5", isLow ? "bg-slate-800" : "bg-slate-800")} />
-              
-              {isLow && (
-                <div className="mt-2 space-y-2 animate-in slide-in-from-top-1 duration-300">
-                  <div className="flex gap-2">
-                    <Info className="h-3 w-3 text-cyan-400 shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                <Progress value={percentage} className={cn("h-1", isLow ? "bg-slate-800" : "bg-slate-800")} />
+                
+                {isLow && (
+                  <div className="mt-2 space-y-1 animate-in slide-in-from-top-1 duration-300">
+                    <p className="text-[9px] text-slate-400 leading-tight">
                       <span className="text-cyan-400 font-bold">Dampak:</span> {m.impact}
                     </p>
                   </div>
-                  <div className="flex gap-2 p-2 bg-purple-500/5 rounded-lg border border-purple-500/10">
-                    <BookOpen className="h-3 w-3 text-purple-400 shrink-0 mt-0.5" />
-                    <p className="text-[9px] text-slate-500 leading-relaxed italic">
-                      <span className="text-purple-400 font-bold not-italic">Wawasan Riset:</span> {m.research}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         <div className="pt-2 border-t border-slate-800">
           <div className="flex items-center gap-2 text-slate-500">
-            <ChevronRight className="h-3 w-3" />
-            <p className="text-[9px] italic">Analisis tren membantu mendeteksi defisiensi nutrisi yang konsisten.</p>
+            <BookOpen className="h-3 w-3" />
+            <p className="text-[9px] italic">Data ditarik menggunakan Nutrient ID resmi untuk akurasi maksimal.</p>
           </div>
         </div>
       </CardContent>
