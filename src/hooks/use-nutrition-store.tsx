@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+"use client";
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { FoodItem, Nutrient, getNutrientById, NUTRIENT_IDS } from '@/lib/usda-api';
 import confetti from 'canvas-confetti';
 
@@ -58,6 +60,34 @@ export interface MealPlan {
   days: { [key: string]: Recipe[] };
 }
 
+interface NutritionContextType {
+  profile: UserProfile;
+  setProfile: (profile: UserProfile) => void;
+  logs: LogEntry[];
+  addLog: (food: FoodItem, amount: number) => void;
+  recipes: Recipe[];
+  addRecipe: (name: string, ingredients: { food: FoodItem; amount: number }[]) => void;
+  deleteRecipe: (id: string) => void;
+  mealPlans: MealPlan[];
+  addMealPlan: (name: string, days: { [key: string]: Recipe[] }) => void;
+  wearableData: WearableData;
+  toggleSleep: () => void;
+  resetSleep: () => void;
+  waterIntake: number;
+  addWater: (amount: number) => void;
+  setWaterIntake: (amount: number) => void;
+  points: number;
+  achievements: Achievement[];
+  calculateBMI: () => string;
+  calculateRecommendedCalories: () => number;
+  calculateRecommendedProtein: () => number;
+  getAKGGoals: () => any;
+  getAverageNutrients: (days?: number) => any;
+  convertRecipeToFood: (recipe: Recipe) => FoodItem;
+}
+
+const NutritionContext = createContext<NutritionContextType | undefined>(undefined);
+
 const INITIAL_PROFILE: UserProfile = {
   name: "Penjelajah",
   weight: 70,
@@ -80,7 +110,7 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
   { id: 'hydration_hero', title: 'Pahlawan Hidrasi', description: 'Capai target minum air', icon: '💧', unlocked: false },
 ];
 
-export function useNutritionStore() {
+export const NutritionProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('nutrition_profile');
     return saved ? JSON.parse(saved) : INITIAL_PROFILE;
@@ -145,7 +175,7 @@ export function useNutritionStore() {
       timestamp: Date.now(),
     };
     setLogs(prev => [...prev, newLog]);
-    addPoints(10);
+    setPoints(prev => prev + 10);
     checkAchievements('first_log');
   };
 
@@ -164,13 +194,12 @@ export function useNutritionStore() {
           endTime,
           durationHours
         };
-        const history = prev.sleepHistory || [];
         return { 
           ...prev, 
           isSleeping: false, 
           sleepStartTime: null, 
           sleepHours: Number((prev.sleepHours + durationHours).toFixed(1)),
-          sleepHistory: [newSession, ...history].slice(0, 10)
+          sleepHistory: [newSession, ...(prev.sleepHistory || [])].slice(0, 10)
         };
       }
     });
@@ -186,13 +215,14 @@ export function useNutritionStore() {
       if (newVal >= profile.waterGoal) checkAchievements('hydration_hero');
       return newVal;
     });
-    addPoints(5);
+    setPoints(prev => prev + 5);
   };
 
   const addRecipe = (name: string, ingredients: { food: FoodItem; amount: number }[]) => {
     const newRecipe: Recipe = { id: `recipe-${Math.random().toString(36).substr(2, 9)}`, name, ingredients };
     setRecipes(prev => [...prev, newRecipe]);
-    addPoints(50);
+    setPoints(prev => prev + 50);
+    confetti();
     checkAchievements('recipe_master');
   };
 
@@ -203,13 +233,9 @@ export function useNutritionStore() {
   const addMealPlan = (name: string, days: { [key: string]: Recipe[] }) => {
     const newPlan: MealPlan = { id: Math.random().toString(36).substr(2, 9), name, days };
     setMealPlans(prev => [...prev, newPlan]);
-    addPoints(100);
+    setPoints(prev => prev + 100);
+    confetti();
     checkAchievements('planner_pro');
-  };
-
-  const addPoints = (amount: number) => {
-    setPoints(prev => prev + amount);
-    if (amount >= 50) confetti();
   };
 
   const checkAchievements = (id: string) => {
@@ -243,17 +269,12 @@ export function useNutritionStore() {
   };
 
   const calculateRecommendedProtein = () => {
-    // Faktor protein berdasarkan aktivitas & target (Halodoc/Alodokter)
-    let factor = 0.8; // Default Sedenter
-    
+    let factor = 0.8;
     if (profile.activityLevel === 'light') factor = 1.0;
     if (profile.activityLevel === 'moderate') factor = 1.2;
     if (profile.activityLevel === 'active') factor = 1.5;
     if (profile.activityLevel === 'very_active' || profile.goal === 'muscle_gain') factor = 2.0;
-    
-    // Penyesuaian khusus target
-    if (profile.goal === 'weight_loss') factor = Math.max(factor, 1.2); // Protein tinggi saat diet agar otot tidak hilang
-
+    if (profile.goal === 'weight_loss') factor = Math.max(factor, 1.2);
     return Math.round(profile.weight * factor);
   };
 
@@ -316,10 +337,22 @@ export function useNutritionStore() {
     };
   };
 
-  return { 
-    profile, setProfile, logs, addLog, recipes, addRecipe, deleteRecipe, mealPlans, addMealPlan,
-    wearableData, toggleSleep, resetSleep, waterIntake, addWater, setWaterIntake, points, achievements, 
-    addPoints, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein,
-    getAKGGoals, getAverageNutrients, convertRecipeToFood
-  };
-}
+  return (
+    <NutritionContext.Provider value={{ 
+      profile, setProfile, logs, addLog, recipes, addRecipe, deleteRecipe, mealPlans, addMealPlan,
+      wearableData, toggleSleep, resetSleep, waterIntake, addWater, setWaterIntake, points, achievements, 
+      calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein,
+      getAKGGoals, getAverageNutrients, convertRecipeToFood
+    }}>
+      {children}
+    </NutritionContext.Provider>
+  );
+};
+
+export const useNutritionStore = () => {
+  const context = useContext(NutritionContext);
+  if (context === undefined) {
+    throw new Error('useNutritionStore must be used within a NutritionProvider');
+  }
+  return context;
+};
