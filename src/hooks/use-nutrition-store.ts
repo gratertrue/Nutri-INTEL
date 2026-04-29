@@ -131,13 +131,11 @@ export function useNutritionStore() {
     const today = new Date().toDateString();
 
     if (lastResetDate !== today) {
-      // Reset daily transient data
       setWaterIntake(0);
       setWearableData(prev => ({
         ...prev,
         steps: 0,
         sleepHours: 0,
-        // isSleeping & sleepStartTime tetap agar tidak terputus jika sedang tidur saat tengah malam
       }));
       localStorage.setItem('nutrition_last_reset_date', today);
     }
@@ -153,6 +151,18 @@ export function useNutritionStore() {
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
   }, [profile, logs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
+
+  const resetAllData = () => {
+    localStorage.clear();
+    setProfile(INITIAL_PROFILE);
+    setLogs([]);
+    setRecipes([]);
+    setMealPlans([]);
+    setWearableData({ steps: 0, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] });
+    setWaterIntake(0);
+    setPoints(0);
+    setAchievements(INITIAL_ACHIEVEMENTS);
+  };
 
   const addLog = (food: FoodItem, amount: number) => {
     const newLog: LogEntry = {
@@ -348,6 +358,6 @@ export function useNutritionStore() {
     profile, setProfile, logs, addLog, recipes, addRecipe, deleteRecipe, mealPlans, addMealPlan,
     wearableData, toggleSleep, resetSleep, waterIntake, addWater, setWaterIntake, points, achievements, 
     addPoints, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein, syncTargetsWithBMI,
-    getAKGGoals, getAverageNutrients, convertRecipeToFood
+    getAKGGoals, getAverageNutrients, convertRecipeToFood, resetAllData
   };
 }

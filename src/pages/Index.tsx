@@ -25,18 +25,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity, Utensils, Calendar, Calculator, Target, Zap, RefreshCw } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
+import { Scale, User as UserIcon, Activity, Utensils, Calendar, Calculator, Target, Zap, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, setProfile, achievements, calculateBMI, syncTargetsWithBMI } = useNutritionStore();
+  const { profile, setProfile, achievements, calculateBMI, syncTargetsWithBMI, resetAllData } = useNutritionStore();
 
   const handleSyncTargets = () => {
     const { cal, prot } = syncTargetsWithBMI();
     showSuccess(`Target disinkronkan! Kalori: ${cal} kkal, Protein: ${prot}g`);
+  };
+
+  const handleReset = () => {
+    const confirmed = window.confirm("PERINGATAN: Ini akan menghapus SEMUA data Anda (profil, resep, riwayat, dll) secara permanen. Lanjutkan?");
+    if (confirmed) {
+      resetAllData();
+      showSuccess("Semua data telah direset. Memulai dari awal...");
+      setActiveTab('dashboard');
+      // Force reload to ensure all states are fresh
+      window.location.reload();
+    }
   };
 
   const renderContent = () => {
@@ -97,7 +108,7 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-3">
                 <Card className="bg-slate-900/50 border-slate-800">
                   <CardContent className="p-4 space-y-4">
                     <div className="flex justify-between items-center mb-2">
@@ -200,6 +211,27 @@ const Index = () => {
                       className="w-full bg-cyan-600 hover:bg-cyan-700 h-11 text-sm font-bold rounded-xl mt-2"
                     >
                       Simpan Perubahan
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* Danger Zone */}
+                <Card className="bg-red-500/5 border-red-500/20">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-red-500">
+                      <AlertTriangle className="h-4 w-4" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider">Danger Zone</h3>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-tight">
+                      Menghapus semua data akan mengembalikan aplikasi ke kondisi awal. Tindakan ini tidak dapat dibatalkan.
+                    </p>
+                    <Button 
+                      onClick={handleReset} 
+                      variant="destructive" 
+                      className="w-full h-9 text-xs font-bold rounded-lg bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      RESET SEMUA DATA
                     </Button>
                   </CardContent>
                 </Card>
