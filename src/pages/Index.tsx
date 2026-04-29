@@ -117,9 +117,9 @@ const Index = () => {
                         onClick={handleSyncTargets} 
                         variant="outline" 
                         size="sm" 
-                        className="h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 text-[10px] font-bold"
+                        className="h-8 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 text-[10px] font-bold"
                       >
-                        <RefreshCw className="h-3 w-3 mr-1.5" />
+                        <Calculator className="h-3 w-3 mr-1.5" />
                         SINKRONISASI TARGET
                       </Button>
                     </div>
