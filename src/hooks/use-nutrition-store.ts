@@ -81,11 +81,13 @@ const INITIAL_ACHIEVEMENTS: Achievement[] = [
 ];
 
 export function useNutritionStore() {
+  // 1. Data Profil (Target)
   const [profile, setProfile] = useState<UserProfile>(() => {
     const saved = localStorage.getItem('nutrition_profile');
     return saved ? JSON.parse(saved) : INITIAL_PROFILE;
   });
 
+  // 2. Data Progres (Log & Riwayat) - Tetap tersimpan meskipun profil berubah
   const [logs, setLogs] = useState<LogEntry[]>(() => {
     const saved = localStorage.getItem('nutrition_logs');
     return saved ? JSON.parse(saved) : [];
@@ -111,13 +113,25 @@ export function useNutritionStore() {
     return defaultData;
   });
 
-  const [waterIntake, setWaterIntake] = useState(() => Number(localStorage.getItem('nutrition_water') || 0));
+  const [waterIntake, setWaterIntake] = useState(() => {
+    const saved = localStorage.getItem('nutrition_water');
+    const lastDate = localStorage.getItem('nutrition_water_date');
+    const today = new Date().toDateString();
+    
+    // Reset air jika hari sudah berganti
+    if (lastDate !== today) {
+      return 0;
+    }
+    return saved ? Number(saved) : 0;
+  });
+
   const [points, setPoints] = useState(() => Number(localStorage.getItem('nutrition_points') || 0));
   const [achievements, setAchievements] = useState<Achievement[]>(() => {
     const saved = localStorage.getItem('nutrition_achievements');
     return saved ? JSON.parse(saved) : INITIAL_ACHIEVEMENTS;
   });
 
+  // Sinkronisasi ke LocalStorage
   useEffect(() => {
     localStorage.setItem('nutrition_profile', JSON.stringify(profile));
     localStorage.setItem('nutrition_logs', JSON.stringify(logs));
@@ -125,6 +139,7 @@ export function useNutritionStore() {
     localStorage.setItem('nutrition_meal_plans', JSON.stringify(mealPlans));
     localStorage.setItem('nutrition_wearable', JSON.stringify(wearableData));
     localStorage.setItem('nutrition_water', waterIntake.toString());
+    localStorage.setItem('nutrition_water_date', new Date().toDateString());
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
   }, [profile, logs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
