@@ -25,14 +25,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/dialog";
 import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity, Utensils, Calendar, Calculator, Target, Zap, RefreshCw } from 'lucide-react';
+import { Scale, User as UserIcon, Activity, Utensils, Calendar, Target, Zap, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, setProfile, achievements, calculateBMI, syncTargetsWithBMI } = useNutritionStore();
+  const { profile, setProfile, achievements, calculateBMI, syncTargetsWithBMI, resetAllData } = useNutritionStore();
 
   const handleSyncTargets = () => {
     const { cal, prot } = syncTargetsWithBMI();
@@ -97,7 +108,7 @@ const Index = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-3">
                 <Card className="bg-slate-900/50 border-slate-800">
                   <CardContent className="p-4 space-y-4">
                     <div className="flex justify-between items-center mb-2">
@@ -201,6 +212,46 @@ const Index = () => {
                     >
                       Simpan Perubahan
                     </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-red-500/5 border-red-500/20">
+                  <CardContent className="p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-500/10 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">Zona Bahaya</p>
+                        <p className="text-[10px] text-slate-500">Hapus semua data dan mulai dari awal.</p>
+                      </div>
+                    </div>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="h-9 px-4 font-bold rounded-lg">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          RESET DATA
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-slate-950 border-slate-800 text-white rounded-3xl">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-xl font-bold">Apakah Anda yakin?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-400">
+                            Tindakan ini tidak dapat dibatalkan. Semua profil, resep, dan riwayat nutrisi Anda akan dihapus secara permanen.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="bg-slate-900 border-slate-800 text-white hover:bg-slate-800 rounded-xl">Batal</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={resetAllData}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl"
+                          >
+                            Ya, Hapus Semua
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </CardContent>
                 </Card>
               </div>

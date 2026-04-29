@@ -131,13 +131,11 @@ export function useNutritionStore() {
     const today = new Date().toDateString();
 
     if (lastResetDate !== today) {
-      // Reset daily transient data
       setWaterIntake(0);
       setWearableData(prev => ({
         ...prev,
         steps: 0,
         sleepHours: 0,
-        // isSleeping & sleepStartTime tetap agar tidak terputus jika sedang tidur saat tengah malam
       }));
       localStorage.setItem('nutrition_last_reset_date', today);
     }
@@ -285,6 +283,19 @@ export function useNutritionStore() {
     return { cal, prot };
   };
 
+  const resetAllData = () => {
+    localStorage.clear();
+    setProfile(INITIAL_PROFILE);
+    setLogs([]);
+    setRecipes([]);
+    setMealPlans([]);
+    setWearableData({ steps: 0, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] });
+    setWaterIntake(0);
+    setPoints(0);
+    setAchievements(INITIAL_ACHIEVEMENTS);
+    window.location.reload();
+  };
+
   const getAKGGoals = () => {
     const isMale = profile.gender === 'male';
     const age = profile.age;
@@ -348,6 +359,6 @@ export function useNutritionStore() {
     profile, setProfile, logs, addLog, recipes, addRecipe, deleteRecipe, mealPlans, addMealPlan,
     wearableData, toggleSleep, resetSleep, waterIntake, addWater, setWaterIntake, points, achievements, 
     addPoints, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein, syncTargetsWithBMI,
-    getAKGGoals, getAverageNutrients, convertRecipeToFood
+    resetAllData, getAKGGoals, getAverageNutrients, convertRecipeToFood
   };
 }
