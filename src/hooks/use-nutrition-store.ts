@@ -103,7 +103,7 @@ export function useNutritionStore() {
 
   const [wearableData, setWearableData] = useState<WearableData>(() => {
     const saved = localStorage.getItem('nutrition_wearable');
-    const defaultData = { steps: 8432, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
+    const defaultData = { steps: 0, sleepHours: 0, isSleeping: false, sleepStartTime: null, sleepHistory: [] };
     if (saved) {
       const parsed = JSON.parse(saved);
       return { ...defaultData, ...parsed, sleepHistory: parsed.sleepHistory || [] };
@@ -113,7 +113,7 @@ export function useNutritionStore() {
 
   const [waterIntake, setWaterIntake] = useState(() => {
     const saved = localStorage.getItem('nutrition_water');
-    const lastDate = localStorage.getItem('nutrition_water_date');
+    const lastDate = localStorage.getItem('nutrition_last_reset_date');
     const today = new Date().toDateString();
     if (lastDate !== today) return 0;
     return saved ? Number(saved) : 0;
@@ -125,6 +125,24 @@ export function useNutritionStore() {
     return saved ? JSON.parse(saved) : INITIAL_ACHIEVEMENTS;
   });
 
+  // Daily Reset Logic
+  useEffect(() => {
+    const lastResetDate = localStorage.getItem('nutrition_last_reset_date');
+    const today = new Date().toDateString();
+
+    if (lastResetDate !== today) {
+      // Reset daily transient data
+      setWaterIntake(0);
+      setWearableData(prev => ({
+        ...prev,
+        steps: 0,
+        sleepHours: 0,
+        // isSleeping & sleepStartTime tetap agar tidak terputus jika sedang tidur saat tengah malam
+      }));
+      localStorage.setItem('nutrition_last_reset_date', today);
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('nutrition_profile', JSON.stringify(profile));
     localStorage.setItem('nutrition_logs', JSON.stringify(logs));
@@ -132,7 +150,6 @@ export function useNutritionStore() {
     localStorage.setItem('nutrition_meal_plans', JSON.stringify(mealPlans));
     localStorage.setItem('nutrition_wearable', JSON.stringify(wearableData));
     localStorage.setItem('nutrition_water', waterIntake.toString());
-    localStorage.setItem('nutrition_water_date', new Date().toDateString());
     localStorage.setItem('nutrition_points', points.toString());
     localStorage.setItem('nutrition_achievements', JSON.stringify(achievements));
   }, [profile, logs, recipes, mealPlans, wearableData, waterIntake, points, achievements]);
@@ -235,26 +252,37 @@ export function useNutritionStore() {
     } else {
       bmr = 447.593 + (9.247 * profile.weight) + (3.098 * profile.height) - (4.330 * profile.age);
     }
-    const activityFactors = { sedentary: 1.2, light: 1.4, moderate: 1.6, active: 1.8, very_active: 2.0 };
+    const activityFactors = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
     let tdee = bmr * activityFactors[profile.activityLevel];
+    
     if (profile.goal === 'weight_loss') tdee -= 500;
     if (profile.goal === 'muscle_gain') tdee += 300;
+    
     return Math.round(tdee);
   };
 
   const calculateRecommendedProtein = () => {
-    // Faktor protein berdasarkan aktivitas & target (Halodoc/Alodokter)
-    let factor = 0.8; // Default Sedenter
-    
+    let factor = 0.8; 
     if (profile.activityLevel === 'light') factor = 1.0;
     if (profile.activityLevel === 'moderate') factor = 1.2;
-    if (profile.activityLevel === 'active') factor = 1.5;
-    if (profile.activityLevel === 'very_active' || profile.goal === 'muscle_gain') factor = 2.0;
+    if (profile.activityLevel === 'active') factor = 1.6;
+    if (profile.activityLevel === 'very_active') factor = 2.0;
     
-    // Penyesuaian khusus target
-    if (profile.goal === 'weight_loss') factor = Math.max(factor, 1.2); // Protein tinggi saat diet agar otot tidak hilang
+    if (profile.goal === 'muscle_gain') factor = Math.max(factor, 1.8);
+    if (profile.goal === 'weight_loss') factor = Math.max(factor, 1.2);
 
     return Math.round(profile.weight * factor);
+  };
+
+  const syncTargetsWithBMI = () => {
+    const cal = calculateRecommendedCalories();
+    const prot = calculateRecommendedProtein();
+    setProfile(prev => ({
+      ...prev,
+      calorieGoal: cal,
+      proteinGoal: prot
+    }));
+    return { cal, prot };
   };
 
   const getAKGGoals = () => {
@@ -319,7 +347,7 @@ export function useNutritionStore() {
   return { 
     profile, setProfile, logs, addLog, recipes, addRecipe, deleteRecipe, mealPlans, addMealPlan,
     wearableData, toggleSleep, resetSleep, waterIntake, addWater, setWaterIntake, points, achievements, 
-    addPoints, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein,
+    addPoints, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein, syncTargetsWithBMI,
     getAKGGoals, getAverageNutrients, convertRecipeToFood
   };
 }

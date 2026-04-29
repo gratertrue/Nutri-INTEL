@@ -26,24 +26,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showSuccess } from '@/utils/toast';
-import { Scale, User as UserIcon, Activity, Utensils, Calendar, Calculator, Target, Zap } from 'lucide-react';
+import { Scale, User as UserIcon, Activity, Utensils, Calendar, Calculator, Target, Zap, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { profile, setProfile, achievements, calculateBMI, calculateRecommendedCalories, calculateRecommendedProtein } = useNutritionStore();
+  const { profile, setProfile, achievements, calculateBMI, syncTargetsWithBMI } = useNutritionStore();
 
-  const handleAutoCalorie = () => {
-    const recommended = calculateRecommendedCalories();
-    setProfile({ ...profile, calorieGoal: recommended });
-    showSuccess(`Target kalori diperbarui menjadi ${recommended} kkal!`);
-  };
-
-  const handleAutoProtein = () => {
-    const recommended = calculateRecommendedProtein();
-    setProfile({ ...profile, proteinGoal: recommended });
-    showSuccess(`Target protein diperbarui menjadi ${recommended}g!`);
+  const handleSyncTargets = () => {
+    const { cal, prot } = syncTargetsWithBMI();
+    showSuccess(`Target disinkronkan! Kalori: ${cal} kkal, Protein: ${prot}g`);
   };
 
   const renderContent = () => {
@@ -107,6 +100,19 @@ const Index = () => {
               <div className="lg:col-span-2">
                 <Card className="bg-slate-900/50 border-slate-800">
                   <CardContent className="p-4 space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">Data Fisik & Target</h3>
+                      <Button 
+                        onClick={handleSyncTargets} 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 text-[10px] font-bold"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1.5" />
+                        SINKRONISASI TARGET
+                      </Button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-slate-500 uppercase font-bold">Nama Lengkap</Label>
@@ -175,24 +181,12 @@ const Index = () => {
 
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-slate-500 uppercase font-bold">Target Kalori Harian</Label>
-                        <div className="flex gap-2">
-                          <Input type="number" value={profile.calorieGoal} onChange={e => setProfile({...profile, calorieGoal: Number(e.target.value)})} className="h-9 bg-slate-800 border-slate-700 text-sm" />
-                          <Button onClick={handleAutoCalorie} size="sm" variant="outline" className="h-9 px-3 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10">
-                            <Calculator className="h-4 w-4 mr-2" />
-                            Hitung
-                          </Button>
-                        </div>
+                        <Input type="number" value={profile.calorieGoal} onChange={e => setProfile({...profile, calorieGoal: Number(e.target.value)})} className="h-9 bg-slate-800 border-slate-700 text-sm" />
                       </div>
 
                       <div className="space-y-1.5">
                         <Label className="text-[10px] text-slate-500 uppercase font-bold">Target Protein (g)</Label>
-                        <div className="flex gap-2">
-                          <Input type="number" value={profile.proteinGoal} onChange={e => setProfile({...profile, proteinGoal: Number(e.target.value)})} className="h-9 bg-slate-800 border-slate-700 text-sm" />
-                          <Button onClick={handleAutoProtein} size="sm" variant="outline" className="h-9 px-3 border-blue-500/30 text-blue-400 hover:bg-blue-500/10">
-                            <Zap className="h-4 w-4 mr-2" />
-                            Hitung
-                          </Button>
-                        </div>
+                        <Input type="number" value={profile.proteinGoal} onChange={e => setProfile({...profile, proteinGoal: Number(e.target.value)})} className="h-9 bg-slate-800 border-slate-700 text-sm" />
                       </div>
 
                       <div className="space-y-1.5">
